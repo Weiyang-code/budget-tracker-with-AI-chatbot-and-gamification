@@ -1,11 +1,30 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:rxdart/rxdart.dart';
 import 'package:budgettracker/services/auth.dart';
 import 'package:budgettracker/services/models.dart';
 
 class FirestoreService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final firestore.FirebaseFirestore _db = firestore.FirebaseFirestore.instance;
+
+  Stream<List<Transaction>> getTransactionsStreamForWallet({
+    required String userId,
+    required String walletId,
+  }) {
+    var ref = _db
+        .collection('users')
+        .doc(userId)
+        .collection('wallets')
+        .doc(walletId)
+        .collection('transactions')
+        .orderBy('date', descending: true);
+
+    return ref.snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => Transaction.fromJson(doc.data()))
+          .toList();
+    });
+  }
 
   Future<List<Topic>> getTopics() async {
     var ref = _db.collection('topics');
