@@ -40,6 +40,7 @@ class Transaction {
   int amount;
   String category;
   String note;
+  String type;
 
   Transaction({
     this.uid = '',
@@ -48,6 +49,7 @@ class Transaction {
     this.amount = 0,
     this.category = '',
     this.note = '',
+    this.type = 'expense',
   }) : date = date ?? Timestamp.now();
 
   factory Transaction.fromJson(Map<String, dynamic> json) =>

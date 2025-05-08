@@ -30,6 +30,7 @@ Transaction _$TransactionFromJson(Map<String, dynamic> json) => Transaction(
   amount: (json['amount'] as num?)?.toInt() ?? 0,
   category: json['category'] as String? ?? '',
   note: json['note'] as String? ?? '',
+  type: json['type'] as String? ?? 'expense',
 );
 
 Map<String, dynamic> _$TransactionToJson(Transaction instance) =>
@@ -40,6 +41,7 @@ Map<String, dynamic> _$TransactionToJson(Transaction instance) =>
       'amount': instance.amount,
       'category': instance.category,
       'note': instance.note,
+      'type': instance.type,
     };
 
 Value? _$JsonConverterFromJson<Json, Value>(

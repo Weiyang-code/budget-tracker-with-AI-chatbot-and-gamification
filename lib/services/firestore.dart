@@ -7,13 +7,57 @@ import 'package:budgettracker/services/models.dart';
 class FirestoreService {
   final firestore.FirebaseFirestore _db = firestore.FirebaseFirestore.instance;
 
-  Stream<List<Transaction>> getTransactionsStreamForWallet({
-    required String userId,
-    required String walletId,
-  }) {
+  Future<void> createWallet({
+    required String name,
+    required int balance,
+  }) async {
+    var user = AuthService().user!; // Get the current authenticated user
+
+    // Reference to the user document in Firestore
+    var userRef = _db.collection('users').doc(user.uid);
+
+    // Check if the user document exists
+    var userDoc = await userRef.get();
+
+    // If the user document doesn't exist, create it
+    if (!userDoc.exists) {
+      await userRef.set({
+        'uid': user.uid,
+        'email': user.email,
+        'createdAt': firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Create a new Wallet object
+    Wallet wallet = Wallet(
+      id:
+          _db
+              .collection('users')
+              .doc(user.uid)
+              .collection('wallets')
+              .doc()
+              .id, // Generate a unique ID
+      name: name,
+      balance: balance, // Set the initial balance from the parameter
+      uid: user.uid, // Set the user's UID
+    );
+
+    // Reference to the user's wallets collection
+    var walletRef = _db
+        .collection('users')
+        .doc(user.uid) // User ID from Firebase Authentication
+        .collection('wallets') // Sub-collection under the user document
+        .doc(wallet.id); // New wallet document ID
+
+    // Set the wallet data to Firestore
+    await walletRef.set(wallet.toJson());
+  }
+
+  Stream<List<Transaction>> streamTransactions({required String walletId}) {
+    var user = AuthService().user!;
     var ref = _db
         .collection('users')
-        .doc(userId)
+        .doc(user.uid)
         .collection('wallets')
         .doc(walletId)
         .collection('transactions')
@@ -26,42 +70,55 @@ class FirestoreService {
     });
   }
 
-  Future<List<Topic>> getTopics() async {
-    var ref = _db.collection('topics');
-    var snapshot = await ref.get();
-    var data = snapshot.docs.map((s) => s.data());
-    var topics = data.map((json) => Topic.fromJson(json));
-    return topics.toList();
-  }
+  Stream<Wallet?> streamWallet({required String walletId}) {
+    var user = AuthService().user!;
+    var docRef = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('wallets')
+        .doc(walletId);
 
-  Future<Quiz> getQuiz(String quizId) async {
-    var ref = _db.collection('quizzes').doc(quizId);
-    var snapshot = await ref.get();
-    return Quiz.fromJson(snapshot.data() ?? {});
-  }
-
-  Stream<Report> streamReport() {
-    return AuthService().userStream.switchMap((user) {
-      if (user != null) {
-        var ref = _db.collection('reports').doc(user.uid);
-        return ref.snapshots().map((doc) => Report.fromJson(doc.data()!));
+    return docRef.snapshots().map((snapshot) {
+      if (snapshot.exists && snapshot.data() != null) {
+        return Wallet.fromJson(snapshot.data()!);
       } else {
-        return Stream.fromIterable([Report()]);
+        return null;
       }
     });
   }
 
-  Future<void> updateUserReport(Quiz quiz) {
+  Future<void> addTransaction({
+    required String walletId,
+    required Transaction transaction,
+  }) async {
     var user = AuthService().user!;
-    var ref = _db.collection('reports').doc(user.uid);
+    var walletRef = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('wallets')
+        .doc(walletId);
+
+    var transactionRef = walletRef.collection('transactions').doc();
+
+    int signedAmount =
+        transaction.type == 'income' ? transaction.amount : -transaction.amount;
 
     var data = {
-      'total': FieldValue.increment(1),
-      'topics': {
-        quiz.topic: FieldValue.arrayUnion([quiz.id]),
-      },
+      'balance': firestore.FieldValue.increment(
+        signedAmount,
+      ), // subtract amount
     };
 
-    return ref.set(data, SetOptions(merge: true));
+    return _db.runTransaction((txn) async {
+      // Add the transaction
+      txn.set(transactionRef, {
+        ...transaction.toJson(),
+        'id': transactionRef.id,
+        'date': transaction.date,
+      });
+
+      // Update the wallet balance
+      txn.set(walletRef, data, firestore.SetOptions(merge: true));
+    });
   }
 }

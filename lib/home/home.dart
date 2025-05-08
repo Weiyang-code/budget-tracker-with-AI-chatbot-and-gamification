@@ -16,7 +16,7 @@ class HomeScreen extends StatelessWidget {
         } else if (snapshot.hasError) {
           return const Center(child: Text('Error'));
         } else if (snapshot.hasData) {
-          return const DashboardScreen();
+          return DashboardScreen();
         } else {
           return LoginScreen();
         }

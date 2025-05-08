@@ -8,7 +8,7 @@ import 'package:budgettracker/register/register.dart';
 var appRoutes = {
   '/': (context) => const HomeScreen(),
   '/login': (context) => LoginScreen(),
-  '/topics': (context) => const DashboardScreen(),
+  '/topics': (context) => DashboardScreen(),
   '/profile': (context) => const ProfileScreen(),
   '/about': (context) => const TransactionScreen(),
   '/register': (context) => RegisterScreen(),
