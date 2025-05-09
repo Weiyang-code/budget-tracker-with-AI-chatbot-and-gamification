@@ -13,6 +13,7 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: BottomNavBar(),
       body: SafeArea(
         child: Center(
           child: Column(
@@ -40,10 +41,6 @@ class DashboardScreen extends StatelessWidget {
                   FirestoreService().createWallet(
                     name: nameController.text,
                     balance: int.parse(balanceController.text),
-                  );
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => BottomNavBar()),
                   );
                 },
                 child: const Text("Create Wallet"),

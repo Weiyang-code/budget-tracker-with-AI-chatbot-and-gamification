@@ -9,15 +9,15 @@ class BottomNavBar extends StatelessWidget {
     return BottomNavigationBar(
       items: const [
         BottomNavigationBarItem(
-          icon: Icon(FontAwesomeIcons.graduationCap, size: 20),
-          label: 'Topics',
+          icon: Icon(FontAwesomeIcons.house, size: 20), // Updated
+          label: 'Home',
         ),
         BottomNavigationBarItem(
-          icon: Icon(FontAwesomeIcons.bolt, size: 20),
-          label: 'About',
+          icon: Icon(FontAwesomeIcons.wallet, size: 20), // Updated
+          label: 'Transactions',
         ),
         BottomNavigationBarItem(
-          icon: Icon(FontAwesomeIcons.circleUser, size: 20),
+          icon: Icon(FontAwesomeIcons.circleUser, size: 20), // Same
           label: 'Profile',
         ),
       ],
@@ -25,10 +25,13 @@ class BottomNavBar extends StatelessWidget {
       onTap: (int idx) {
         switch (idx) {
           case 0:
-            // do nothing
+            Navigator.pushNamed(context, '/dashboard');
             break;
           case 1:
-            Navigator.pushNamed(context, '/about');
+            Navigator.pushNamed(
+              context,
+              '/transaction',
+            ); // Update route if needed
             break;
           case 2:
             Navigator.pushNamed(context, '/profile');
