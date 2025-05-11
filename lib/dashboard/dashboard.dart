@@ -2,7 +2,8 @@ import 'package:budgettracker/components/text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:budgettracker/shared/bottom_navbar.dart';
 import 'package:budgettracker/services/firestore.dart';
-import 'package:budgettracker/shared/shared.dart';
+import 'package:budgettracker/shared/navigation_drawer.dart';
+import 'package:budgettracker/services/auth.dart';
 
 class DashboardScreen extends StatelessWidget {
   DashboardScreen({super.key});
@@ -12,7 +13,13 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var user = AuthService().user;
     return Scaffold(
+      appBar: AppBar(),
+      drawer: SideDrawer(
+        name: user?.displayName ?? 'Guest',
+        photoURL: user?.photoURL,
+      ),
       bottomNavigationBar: BottomNavBar(),
       body: SafeArea(
         child: Center(

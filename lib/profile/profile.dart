@@ -10,10 +10,7 @@ class ProfileScreen extends StatelessWidget {
 
     if (user != null) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text("Profile"),
-          backgroundColor: Colors.deepOrange,
-        ),
+        appBar: AppBar(title: Text("Profile")),
         body: Center(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
