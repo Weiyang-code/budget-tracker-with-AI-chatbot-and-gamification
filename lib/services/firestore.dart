@@ -53,6 +53,53 @@ class FirestoreService {
     await walletRef.set(wallet.toJson());
   }
 
+  Future<void> createBudget({
+    required String category,
+    required double amount,
+    required DateTime startTime,
+    required DateTime endTime,
+  }) async {
+    var user = AuthService().user!; // Get the current authenticated user
+
+    // Reference to the user document in Firestore
+    var userRef = _db.collection('users').doc(user.uid);
+
+    // Check if the user document exists
+    var userDoc = await userRef.get();
+
+    // If the user document doesn't exist, create it
+    if (!userDoc.exists) {
+      await userRef.set({
+        'uid': user.uid,
+        'email': user.email,
+        'createdAt': firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Create a Budget object with generated ID
+    Budget budget = Budget(
+      id: _db.collection('users').doc(user.uid).collection('budgets').doc().id,
+      uid: user.uid,
+      category: category,
+      amount: amount,
+      startTime: firestore.Timestamp.fromDate(startTime),
+      endTime: firestore.Timestamp.fromDate(endTime),
+      createdAt:
+          firestore
+              .Timestamp.now(), // Or handle server timestamp in Firestore if needed
+    );
+
+    // Reference to the user's budgets collection
+    var budgetRef = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('budgets')
+        .doc(budget.id);
+
+    // Save the budget to Firestore
+    await budgetRef.set(budget.toJson());
+  }
+
   Stream<List<Transaction>> streamTransactions({required String walletId}) {
     var user = AuthService().user!;
     var ref = _db

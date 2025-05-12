@@ -9,7 +9,8 @@ class BottomNavBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 16.0), // Increased top margin
       child: BottomNavigationBar(
-        iconSize: 25.0, // Set icon size to 25
+        iconSize: 25.0,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(FontAwesomeIcons.house),
@@ -18,6 +19,10 @@ class BottomNavBar extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Icon(FontAwesomeIcons.dollarSign),
             label: 'Transactions',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(FontAwesomeIcons.piggyBank),
+            label: 'Budgets',
           ),
           BottomNavigationBarItem(
             icon: Icon(FontAwesomeIcons.circleUser),
@@ -40,6 +45,9 @@ class BottomNavBar extends StatelessWidget {
               Navigator.pushNamed(context, '/transaction');
               break;
             case 2:
+              Navigator.pushNamed(context, '/budget');
+              break;
+            case 3:
               Navigator.pushNamed(context, '/profile');
               break;
           }

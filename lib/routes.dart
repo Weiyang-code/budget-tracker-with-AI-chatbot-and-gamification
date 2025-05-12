@@ -7,6 +7,7 @@ import 'package:budgettracker/register/register.dart';
 import 'package:budgettracker/challenges/challenges.dart';
 import 'package:budgettracker/chatbot/chatbot.dart';
 import 'package:budgettracker/transaction/history.dart';
+import 'package:budgettracker/budget/budget.dart';
 
 var appRoutes = {
   '/': (context) => const HomeScreen(),
@@ -18,4 +19,5 @@ var appRoutes = {
   '/challenges': (context) => const ChallengesScreen(),
   '/chatbot': (context) => const ChatbotScreen(),
   '/history': (context) => const HistoryScreen(),
+  '/budget': (context) => const BudgetScreen(),
 };

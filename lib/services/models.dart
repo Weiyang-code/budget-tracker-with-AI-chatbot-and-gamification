@@ -58,6 +58,38 @@ class Transaction {
 }
 
 @JsonSerializable()
+class Budget {
+  String id;
+  String uid;
+  String category;
+  double amount;
+
+  @TimestampConverter()
+  Timestamp startTime;
+
+  @TimestampConverter()
+  Timestamp endTime;
+
+  @TimestampConverter()
+  Timestamp createdAt;
+
+  Budget({
+    this.id = '',
+    this.uid = '',
+    this.category = '',
+    this.amount = 0.0,
+    Timestamp? startTime,
+    Timestamp? endTime,
+    Timestamp? createdAt,
+  }) : startTime = startTime ?? Timestamp.now(),
+       endTime = endTime ?? Timestamp.now(),
+       createdAt = createdAt ?? Timestamp.now();
+
+  factory Budget.fromJson(Map<String, dynamic> json) => _$BudgetFromJson(json);
+  Map<String, dynamic> toJson() => _$BudgetToJson(this);
+}
+
+@JsonSerializable()
 class Category {
   String id;
   String name;
