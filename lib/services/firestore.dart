@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
-import 'package:rxdart/rxdart.dart';
 import 'package:budgettracker/services/auth.dart';
 import 'package:budgettracker/services/models.dart';
 
@@ -9,7 +8,7 @@ class FirestoreService {
 
   Future<void> createWallet({
     required String name,
-    required int balance,
+    required double balance,
   }) async {
     var user = AuthService().user!; // Get the current authenticated user
 
@@ -134,6 +133,45 @@ class FirestoreService {
     });
   }
 
+  Stream<List<Wallet>> streamAllWallets() {
+    var user = AuthService().user!;
+    var collectionRef = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('wallets');
+
+    return collectionRef.snapshots().map((querySnapshot) {
+      return querySnapshot.docs.map((doc) {
+        return Wallet.fromJson(doc.data());
+      }).toList();
+    });
+  }
+
+  Stream<double> streamTotalBalance() {
+    var user = AuthService().user!;
+
+    // Listen to changes in the wallets collection for the current user
+    return _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('wallets')
+        .snapshots()
+        .map((querySnapshot) {
+          double total = 0.0;
+
+          // Sum the balances for all wallets
+          for (var doc in querySnapshot.docs) {
+            final data = doc.data();
+            if (data.containsKey('balance')) {
+              final balance = data['balance'];
+              total += balance;
+            }
+          }
+
+          return total;
+        });
+  }
+
   Future<void> addTransaction({
     required String walletId,
     required Transaction transaction,
@@ -147,7 +185,7 @@ class FirestoreService {
 
     var transactionRef = walletRef.collection('transactions').doc();
 
-    int signedAmount =
+    double signedAmount =
         transaction.type == 'income' ? transaction.amount : -transaction.amount;
 
     var data = {

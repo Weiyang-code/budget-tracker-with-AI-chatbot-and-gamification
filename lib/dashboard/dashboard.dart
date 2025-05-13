@@ -4,6 +4,7 @@ import 'package:budgettracker/shared/bottom_navbar.dart';
 import 'package:budgettracker/services/firestore.dart';
 import 'package:budgettracker/shared/navigation_drawer.dart';
 import 'package:budgettracker/services/auth.dart';
+import 'package:budgettracker/dashboard/card.dart';
 
 class DashboardScreen extends StatelessWidget {
   DashboardScreen({super.key});
@@ -25,33 +26,9 @@ class DashboardScreen extends StatelessWidget {
         child: Center(
           child: Column(
             children: [
-              const SizedBox(height: 50),
-              const Text(
-                "Create Wallet",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 25),
-              MyTextField(
-                controller: nameController,
-                hintText: "Wallet Name",
-                obscureText: false,
-              ),
-              const SizedBox(height: 10),
-              MyTextField(
-                controller: balanceController,
-                hintText: "Initial Balance",
-                obscureText: false,
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () {
-                  FirestoreService().createWallet(
-                    name: nameController.text,
-                    balance: int.parse(balanceController.text),
-                  );
-                },
-                child: const Text("Create Wallet"),
-              ),
+              const SizedBox(height: 20),
+              // WalletCard placed at the top
+              WalletCard(),
             ],
           ),
         ),

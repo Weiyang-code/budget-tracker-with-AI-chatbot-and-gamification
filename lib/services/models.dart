@@ -20,7 +20,7 @@ class TimestampConverter implements JsonConverter<Timestamp, Object> {
 class Wallet {
   String id;
   String name;
-  int balance; // or double if you prefer
+  double balance; // or double if you prefer
   String uid;
 
   Wallet({this.id = '', this.name = '', this.balance = 0, this.uid = ''});
@@ -37,7 +37,7 @@ class Transaction {
   @TimestampConverter()
   Timestamp date;
 
-  int amount;
+  double amount;
   String category;
   String note;
   String type;
@@ -94,7 +94,7 @@ class Category {
   String id;
   String name;
   String icon; // optional: emoji or icon filename
-  int total; // total spending in this category
+  double total; // total spending in this category
 
   Category({this.id = '', this.name = '', this.icon = '', this.total = 0});
 

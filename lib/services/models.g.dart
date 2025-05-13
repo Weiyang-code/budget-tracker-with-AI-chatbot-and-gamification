@@ -9,7 +9,7 @@ part of 'models.dart';
 Wallet _$WalletFromJson(Map<String, dynamic> json) => Wallet(
   id: json['id'] as String? ?? '',
   name: json['name'] as String? ?? '',
-  balance: (json['balance'] as num?)?.toInt() ?? 0,
+  balance: (json['balance'] as num?)?.toDouble() ?? 0,
   uid: json['uid'] as String? ?? '',
 );
 
@@ -27,7 +27,7 @@ Transaction _$TransactionFromJson(Map<String, dynamic> json) => Transaction(
     json['date'],
     const TimestampConverter().fromJson,
   ),
-  amount: (json['amount'] as num?)?.toInt() ?? 0,
+  amount: (json['amount'] as num?)?.toDouble() ?? 0,
   category: json['category'] as String? ?? '',
   note: json['note'] as String? ?? '',
   type: json['type'] as String? ?? 'expense',
@@ -82,7 +82,7 @@ Category _$CategoryFromJson(Map<String, dynamic> json) => Category(
   id: json['id'] as String? ?? '',
   name: json['name'] as String? ?? '',
   icon: json['icon'] as String? ?? '',
-  total: (json['total'] as num?)?.toInt() ?? 0,
+  total: (json['total'] as num?)?.toDouble() ?? 0,
 );
 
 Map<String, dynamic> _$CategoryToJson(Category instance) => <String, dynamic>{

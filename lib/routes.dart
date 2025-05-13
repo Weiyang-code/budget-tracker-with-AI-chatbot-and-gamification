@@ -8,6 +8,7 @@ import 'package:budgettracker/challenges/challenges.dart';
 import 'package:budgettracker/chatbot/chatbot.dart';
 import 'package:budgettracker/transaction/history.dart';
 import 'package:budgettracker/budget/budget.dart';
+import 'package:budgettracker/wallet/wallet.dart';
 
 var appRoutes = {
   '/': (context) => const HomeScreen(),
@@ -20,4 +21,5 @@ var appRoutes = {
   '/chatbot': (context) => const ChatbotScreen(),
   '/history': (context) => const HistoryScreen(),
   '/budget': (context) => const BudgetScreen(),
+  '/wallet': (context) => const WalletScreen(),
 };

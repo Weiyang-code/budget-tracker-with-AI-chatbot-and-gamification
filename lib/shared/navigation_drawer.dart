@@ -38,6 +38,13 @@ class SideDrawer extends StatelessWidget {
             },
           ),
           ListTile(
+            leading: const Icon(FontAwesomeIcons.wallet),
+            title: const Text('Wallets'),
+            onTap: () {
+              Navigator.pushNamed(context, '/wallet');
+            },
+          ),
+          ListTile(
             leading: const Icon(FontAwesomeIcons.history),
             title: const Text('History'),
             onTap: () {
