@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:budgettracker/services/auth.dart';
 import 'package:budgettracker/services/models.dart';
+import 'package:flutter/material.dart';
 import 'package:live_currency_rate/live_currency_rate.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class FirestoreService {
   final firestore.FirebaseFirestore _db = firestore.FirebaseFirestore.instance;
@@ -31,46 +33,60 @@ class FirestoreService {
   }) async {
     var user = AuthService().user!; // Get the current authenticated user
 
-    // Reference to the user document in Firestore
-    var userRef = _db.collection('users').doc(user.uid);
+    try {
+      // Reference to the user document in Firestore
+      var userRef = _db.collection('users').doc(user.uid);
 
-    // Check if the user document exists
-    var userDoc = await userRef.get();
+      // Check if the user document exists
+      var userDoc = await userRef.get();
 
-    // If the user document doesn't exist, create it
-    if (!userDoc.exists) {
-      await userRef.set({
-        'uid': user.uid,
-        'email': user.email,
+      // If the user document doesn't exist, create it
+      if (!userDoc.exists) {
+        await userRef.set({
+          'uid': user.uid,
+          'email': user.email,
+          'createdAt': firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Generate new wallet document reference
+      var newWalletDoc =
+          _db.collection('users').doc(user.uid).collection('wallets').doc();
+
+      // Create a new Wallet object
+      Wallet wallet = Wallet(
+        id: newWalletDoc.id,
+        name: name,
+        balance: balance,
+        type: type,
+        currency: currency,
+        uid: user.uid,
+      );
+
+      // Set the wallet data to Firestore with createdAt
+      await newWalletDoc.set({
+        ...wallet.toJson(),
         'createdAt': firestore.FieldValue.serverTimestamp(),
       });
+
+      Fluttertoast.showToast(
+        msg: "Wallet created successfully",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.SNACKBAR,
+        backgroundColor: Colors.black54,
+        textColor: Colors.green[300],
+        fontSize: 16.0,
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Failed to create wallet: $e",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.SNACKBAR,
+        backgroundColor: Colors.red[700],
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
     }
-
-    // Create a new Wallet object
-    Wallet wallet = Wallet(
-      id:
-          _db
-              .collection('users')
-              .doc(user.uid)
-              .collection('wallets')
-              .doc()
-              .id, // Generate a unique ID
-      name: name,
-      balance: balance,
-      type: type,
-      currency: currency,
-      uid: user.uid,
-    );
-
-    // Reference to the user's wallets collection
-    var walletRef = _db
-        .collection('users')
-        .doc(user.uid) // User ID from Firebase Authentication
-        .collection('wallets') // Sub-collection under the user document
-        .doc(wallet.id); // New wallet document ID
-
-    // Set the wallet data to Firestore
-    await walletRef.set(wallet.toJson());
   }
 
   Future<void> createBudget({
@@ -79,46 +95,63 @@ class FirestoreService {
     required DateTime startTime,
     required DateTime endTime,
   }) async {
-    var user = AuthService().user!; // Get the current authenticated user
+    try {
+      var user = AuthService().user!;
 
-    // Reference to the user document in Firestore
-    var userRef = _db.collection('users').doc(user.uid);
+      var userRef = _db.collection('users').doc(user.uid);
+      var userDoc = await userRef.get();
 
-    // Check if the user document exists
-    var userDoc = await userRef.get();
+      if (!userDoc.exists) {
+        await userRef.set({
+          'uid': user.uid,
+          'email': user.email,
+          'createdAt': firestore.FieldValue.serverTimestamp(),
+        });
+      }
 
-    // If the user document doesn't exist, create it
-    if (!userDoc.exists) {
-      await userRef.set({
-        'uid': user.uid,
-        'email': user.email,
+      var budgetId =
+          _db.collection('users').doc(user.uid).collection('budgets').doc().id;
+
+      Budget budget = Budget(
+        id: budgetId,
+        uid: user.uid,
+        category: category,
+        amount: amount,
+        startTime: firestore.Timestamp.fromDate(startTime),
+        endTime: firestore.Timestamp.fromDate(endTime),
+        spending: 0,
+        createdAt: null, // Will be set by Firestore server timestamp
+      );
+
+      var budgetRef = _db
+          .collection('users')
+          .doc(user.uid)
+          .collection('budgets')
+          .doc(budgetId);
+
+      await budgetRef.set({
+        ...budget.toJson(),
         'createdAt': firestore.FieldValue.serverTimestamp(),
       });
+
+      Fluttertoast.showToast(
+        msg: "Budget created successfully",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.SNACKBAR,
+        backgroundColor: Colors.black54,
+        textColor: Colors.green[300],
+        fontSize: 16.0,
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Failed to create budget: $e",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.SNACKBAR,
+        backgroundColor: Colors.red[700],
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
     }
-
-    // Create a Budget object with generated ID
-    Budget budget = Budget(
-      id: _db.collection('users').doc(user.uid).collection('budgets').doc().id,
-      uid: user.uid,
-      category: category,
-      amount: amount,
-      startTime: firestore.Timestamp.fromDate(startTime),
-      endTime: firestore.Timestamp.fromDate(endTime),
-      spending: 0,
-      createdAt:
-          firestore
-              .Timestamp.now(), // Or handle server timestamp in Firestore if needed
-    );
-
-    // Reference to the user's budgets collection
-    var budgetRef = _db
-        .collection('users')
-        .doc(user.uid)
-        .collection('budgets')
-        .doc(budget.id);
-
-    // Save the budget to Firestore
-    await budgetRef.set(budget.toJson());
   }
 
   Stream<List<Budget>> streamAllBudgets() {
@@ -241,6 +274,7 @@ class FirestoreService {
   Future<void> addTransaction({
     required String walletId,
     required Transaction transaction,
+    required String note,
   }) async {
     var user = AuthService().user!;
     var walletRef = _db
@@ -249,25 +283,30 @@ class FirestoreService {
         .collection('wallets')
         .doc(walletId);
 
-    var transactionRef = walletRef.collection('transactions').doc();
+    var walletTransactionRef = walletRef.collection('transactions').doc();
 
     double signedAmount =
         transaction.type == 'income' ? transaction.amount : -transaction.amount;
 
     var data = {'balance': firestore.FieldValue.increment(signedAmount)};
 
-    return _db.runTransaction((txn) async {
-      // Add the transaction
-      txn.set(transactionRef, {
+    await _db.runTransaction((txn) async {
+      final transactionData = {
         ...transaction.toJson(),
-        'id': transactionRef.id,
+        'id': walletTransactionRef.id,
+        'uid': user.uid,
+        'note': note,
+        'walletId': walletId,
         'date': transaction.date,
-      });
+      };
 
-      // Update the wallet balance
+      // Add transaction to wallet's subcollection
+      txn.set(walletTransactionRef, transactionData);
+
+      // Update wallet balance
       txn.set(walletRef, data, firestore.SetOptions(merge: true));
 
-      // If expense, update budget spending in USD
+      // Handle expense and update budgets
       if (transaction.type == 'expense') {
         var budgetsRef = _db
             .collection('users')
@@ -276,22 +315,21 @@ class FirestoreService {
 
         var now = firestore.Timestamp.now();
 
-        // Get the wallet to determine its currency
+        // Get wallet currency
         var walletSnapshot = await walletRef.get();
         var walletData = walletSnapshot.data();
         String walletCurrency = walletData?['currency'] ?? 'USD';
 
-        // Convert the amount to USD
+        // Convert amount to USD
         double usdAmount = await convertToUSD(
           transaction.amount,
           walletCurrency,
         );
 
-        // Find matching budgets
+        // Query budgets with matching category and endTime not passed
         var matchingBudgets =
             await budgetsRef
                 .where('category', isEqualTo: transaction.category)
-                .where('startTime', isLessThanOrEqualTo: now)
                 .where('endTime', isGreaterThanOrEqualTo: now)
                 .get();
 
@@ -302,5 +340,15 @@ class FirestoreService {
         }
       }
     });
+
+    // Show toast after transaction completes successfully
+    Fluttertoast.showToast(
+      msg: "Transaction added successfully",
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.SNACKBAR,
+      backgroundColor: Colors.black54,
+      textColor: Colors.green[300],
+      fontSize: 16.0,
+    );
   }
 }

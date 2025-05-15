@@ -3,6 +3,7 @@ import 'package:budgettracker/services/firestore.dart';
 import 'package:budgettracker/services/models.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:budgettracker/transaction/history.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
@@ -85,7 +86,7 @@ class WalletScreen extends StatelessWidget {
                       RichText(
                         text: TextSpan(
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 15,
                             color: Colors.white,
                           ),
                           children: [
@@ -104,10 +105,20 @@ class WalletScreen extends StatelessWidget {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Currency: ${wallet.currency} ($currencySymbol)',
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ],
                   ),
                   onTap: () {
-                    // TODO: Navigate to wallet details if needed
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => HistoryScreen(wallet: wallet),
+                      ),
+                    );
                   },
                 ),
               );
