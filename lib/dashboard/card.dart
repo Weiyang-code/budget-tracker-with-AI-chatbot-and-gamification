@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:budgettracker/services/firestore.dart'; // Update path if needed
-import 'package:intl/intl.dart'; // For formatting currency
+import 'package:budgettracker/services/firestore.dart';
+import 'package:intl/intl.dart';
+import 'package:currency_picker/currency_picker.dart';
 
-class WalletCard extends StatelessWidget {
+class WalletCard extends StatefulWidget {
   const WalletCard({super.key});
+
+  @override
+  State<WalletCard> createState() => _WalletCardState();
+}
+
+class _WalletCardState extends State<WalletCard> {
+  Currency _selectedCurrency = CurrencyService().findByCode('USD')!;
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<double>(
-      stream: FirestoreService().streamTotalBalance(),
+      stream: FirestoreService().streamTotalBalance(_selectedCurrency.code),
       builder: (context, snapshot) {
-        // Check if the stream is loading
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
             padding: EdgeInsets.all(16),
@@ -18,7 +25,6 @@ class WalletCard extends StatelessWidget {
           );
         }
 
-        // Check if there was an error
         if (snapshot.hasError) {
           return const Padding(
             padding: EdgeInsets.all(16),
@@ -29,69 +35,10 @@ class WalletCard extends StatelessWidget {
           );
         }
 
-        // If no wallets exist, show a button to create one
-        if (snapshot.data == 0.0) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: Card(
-                color: Colors.grey[900],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'My Wallets',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pushNamed(context, '/wallet');
-                            },
-                            child: Text(
-                              'Create Wallet',
-                              style: TextStyle(
-                                color: Colors.green.shade400,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      const Divider(color: Colors.grey),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'No wallets found.',
-                        style: TextStyle(color: Colors.white54, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-
-        // If wallets exist, show the balance
         double total = snapshot.data ?? 0.0;
         String formattedBalance = NumberFormat.currency(
           locale: 'en_US',
-          symbol: '\$',
+          symbol: _selectedCurrency.symbol,
         ).format(total);
 
         return Padding(
@@ -109,7 +56,7 @@ class WalletCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title Row
+                    // Header
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -139,6 +86,8 @@ class WalletCard extends StatelessWidget {
                     const SizedBox(height: 12),
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 12),
+
+                    // Balance display
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -152,6 +101,71 @@ class WalletCard extends StatelessWidget {
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Currency picker
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            showCurrencyPicker(
+                              context: context,
+                              theme: CurrencyPickerThemeData(
+                                flagSize: 25,
+                                titleTextStyle: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                subtitleTextStyle: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                                bottomSheetHeight: 500,
+                                backgroundColor: Colors.grey[870],
+                              ),
+                              showFlag: true,
+                              showCurrencyName: true,
+                              showCurrencyCode: true,
+                              onSelect: (Currency currency) {
+                                setState(() {
+                                  _selectedCurrency = currency;
+                                });
+                              },
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[900],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Colors.green,
+                                  size: 25,
+                                ),
+                                Text(
+                                  _selectedCurrency.code,
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],

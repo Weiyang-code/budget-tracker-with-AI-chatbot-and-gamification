@@ -1,24 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:budgettracker/services/firestore.dart';
 import 'package:budgettracker/services/models.dart';
-import 'package:budgettracker/wallet/popup.dart'; // Import the new popup
+import 'package:currency_picker/currency_picker.dart';
+import 'package:intl/intl.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
 
-  void _showCreateWalletPopup(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.grey[900],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Popup(), // Your custom popup widget
-        );
-      },
-    );
+  String _getCurrencySymbol(String currencyCode) {
+    try {
+      return CurrencyService().findByCode(currencyCode)?.symbol ?? currencyCode;
+    } catch (_) {
+      return currencyCode;
+    }
   }
 
   @override
@@ -45,7 +39,8 @@ class WalletScreen extends StatelessWidget {
                   const Text('No wallets found'),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => _showCreateWalletPopup(context),
+                    onPressed:
+                        () => Navigator.pushNamed(context, '/add_wallet'),
                     child: const Text('Create Wallet'),
                   ),
                 ],
@@ -58,6 +53,8 @@ class WalletScreen extends StatelessWidget {
             itemCount: wallets.length,
             itemBuilder: (context, index) {
               final wallet = wallets[index];
+              final currencySymbol = _getCurrencySymbol(wallet.currency);
+
               return Card(
                 color: Colors.grey[900],
                 elevation: 4,
@@ -72,10 +69,42 @@ class WalletScreen extends StatelessWidget {
                   ),
                   title: Text(
                     wallet.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 26,
+                    ),
                   ),
-                  subtitle: Text(
-                    'Balance: \$${wallet.balance.toStringAsFixed(2)}',
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Type: ${wallet.type.toLowerCase()}',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 4),
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.white,
+                          ),
+                          children: [
+                            const TextSpan(text: 'Balance: '),
+                            TextSpan(
+                              text: currencySymbol,
+                              style: const TextStyle(color: Colors.green),
+                            ),
+                            TextSpan(
+                              text: NumberFormat.currency(
+                                symbol: '',
+                                decimalDigits: 2,
+                              ).format(wallet.balance),
+                              style: const TextStyle(color: Colors.green),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   onTap: () {
                     // TODO: Navigate to wallet details if needed
@@ -87,8 +116,7 @@ class WalletScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed:
-            () => _showCreateWalletPopup(context), // Open popup on button press
+        onPressed: () => Navigator.pushNamed(context, '/add_wallet'),
         child: const Icon(Icons.add, size: 30),
       ),
     );

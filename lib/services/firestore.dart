@@ -2,13 +2,32 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:budgettracker/services/auth.dart';
 import 'package:budgettracker/services/models.dart';
+import 'package:live_currency_rate/live_currency_rate.dart';
 
 class FirestoreService {
   final firestore.FirebaseFirestore _db = firestore.FirebaseFirestore.instance;
 
+  Future<double> convertToUSD(double amount, String fromCurrency) async {
+    if (fromCurrency == 'USD') return amount;
+
+    try {
+      CurrencyRate rate = await LiveCurrencyRate.convertCurrency(
+        fromCurrency, // e.g., "EUR"
+        'USD', // target currency
+        amount, // amount to convert
+      );
+
+      return rate.result;
+    } catch (e) {
+      return amount; // fallback to original amount
+    }
+  }
+
   Future<void> createWallet({
     required String name,
     required double balance,
+    required String type,
+    required String currency,
   }) async {
     var user = AuthService().user!; // Get the current authenticated user
 
@@ -37,8 +56,10 @@ class FirestoreService {
               .doc()
               .id, // Generate a unique ID
       name: name,
-      balance: balance, // Set the initial balance from the parameter
-      uid: user.uid, // Set the user's UID
+      balance: balance,
+      type: type,
+      currency: currency,
+      uid: user.uid,
     );
 
     // Reference to the user's wallets collection
@@ -83,6 +104,7 @@ class FirestoreService {
       amount: amount,
       startTime: firestore.Timestamp.fromDate(startTime),
       endTime: firestore.Timestamp.fromDate(endTime),
+      spending: 0,
       createdAt:
           firestore
               .Timestamp.now(), // Or handle server timestamp in Firestore if needed
@@ -97,6 +119,20 @@ class FirestoreService {
 
     // Save the budget to Firestore
     await budgetRef.set(budget.toJson());
+  }
+
+  Stream<List<Budget>> streamAllBudgets() {
+    var user = AuthService().user!;
+    var collectionRef = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('budgets');
+
+    return collectionRef.snapshots().map((querySnapshot) {
+      return querySnapshot.docs.map((doc) {
+        return Budget.fromJson(doc.data());
+      }).toList();
+    });
   }
 
   Stream<List<Transaction>> streamTransactions({required String walletId}) {
@@ -147,24 +183,36 @@ class FirestoreService {
     });
   }
 
-  Stream<double> streamTotalBalance() {
+  Stream<double> streamTotalBalance(String targetCurrency) {
     var user = AuthService().user!;
 
-    // Listen to changes in the wallets collection for the current user
     return _db
         .collection('users')
         .doc(user.uid)
         .collection('wallets')
         .snapshots()
-        .map((querySnapshot) {
+        .asyncMap((querySnapshot) async {
           double total = 0.0;
 
-          // Sum the balances for all wallets
           for (var doc in querySnapshot.docs) {
             final data = doc.data();
-            if (data.containsKey('balance')) {
+
+            if (data.containsKey('balance') && data.containsKey('currency')) {
               final balance = data['balance'];
-              total += balance;
+              final walletCurrency = data['currency'];
+
+              if (walletCurrency == targetCurrency) {
+                total += balance;
+              } else {
+                try {
+                  CurrencyRate rate = await LiveCurrencyRate.convertCurrency(
+                    walletCurrency,
+                    targetCurrency,
+                    balance,
+                  );
+                  total += rate.result;
+                } catch (e) {}
+              }
             }
           }
 
@@ -188,11 +236,7 @@ class FirestoreService {
     double signedAmount =
         transaction.type == 'income' ? transaction.amount : -transaction.amount;
 
-    var data = {
-      'balance': firestore.FieldValue.increment(
-        signedAmount,
-      ), // subtract amount
-    };
+    var data = {'balance': firestore.FieldValue.increment(signedAmount)};
 
     return _db.runTransaction((txn) async {
       // Add the transaction
@@ -204,6 +248,41 @@ class FirestoreService {
 
       // Update the wallet balance
       txn.set(walletRef, data, firestore.SetOptions(merge: true));
+
+      // If expense, update budget spending in USD
+      if (transaction.type == 'expense') {
+        var budgetsRef = _db
+            .collection('users')
+            .doc(user.uid)
+            .collection('budgets');
+
+        var now = firestore.Timestamp.now();
+
+        // Get the wallet to determine its currency
+        var walletSnapshot = await walletRef.get();
+        var walletData = walletSnapshot.data();
+        String walletCurrency = walletData?['currency'] ?? 'USD';
+
+        // Convert the amount to USD
+        double usdAmount = await convertToUSD(
+          transaction.amount,
+          walletCurrency,
+        );
+
+        // Find matching budgets
+        var matchingBudgets =
+            await budgetsRef
+                .where('category', isEqualTo: transaction.category)
+                .where('startTime', isLessThanOrEqualTo: now)
+                .where('endTime', isGreaterThanOrEqualTo: now)
+                .get();
+
+        for (var doc in matchingBudgets.docs) {
+          txn.update(doc.reference, {
+            'spending': firestore.FieldValue.increment(usdAmount),
+          });
+        }
+      }
     });
   }
 }

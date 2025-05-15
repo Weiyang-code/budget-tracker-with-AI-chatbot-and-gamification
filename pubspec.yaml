@@ -47,6 +47,9 @@ dependencies:
   provider: ^6.1.4
   google_nav_bar: ^5.0.7
   intl: ^0.20.2
+  currency_picker: ^2.0.21
+  live_currency_rate: ^1.0.8
+  date_picker_plus: ^4.2.0
 
 dev_dependencies:
   flutter_test:

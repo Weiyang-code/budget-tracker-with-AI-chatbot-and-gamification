@@ -11,11 +11,15 @@ Wallet _$WalletFromJson(Map<String, dynamic> json) => Wallet(
   name: json['name'] as String? ?? '',
   balance: (json['balance'] as num?)?.toDouble() ?? 0,
   uid: json['uid'] as String? ?? '',
+  type: json['type'] as String? ?? '',
+  currency: json['currency'] as String? ?? '',
 );
 
 Map<String, dynamic> _$WalletToJson(Wallet instance) => <String, dynamic>{
   'id': instance.id,
   'name': instance.name,
+  'type': instance.type,
+  'currency': instance.currency,
   'balance': instance.balance,
   'uid': instance.uid,
 };
@@ -54,6 +58,7 @@ Budget _$BudgetFromJson(Map<String, dynamic> json) => Budget(
   uid: json['uid'] as String? ?? '',
   category: json['category'] as String? ?? '',
   amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+  spending: (json['spending'] as num?)?.toDouble() ?? 0.0,
   startTime: _$JsonConverterFromJson<Object, Timestamp>(
     json['startTime'],
     const TimestampConverter().fromJson,
@@ -73,6 +78,7 @@ Map<String, dynamic> _$BudgetToJson(Budget instance) => <String, dynamic>{
   'uid': instance.uid,
   'category': instance.category,
   'amount': instance.amount,
+  'spending': instance.spending,
   'startTime': const TimestampConverter().toJson(instance.startTime),
   'endTime': const TimestampConverter().toJson(instance.endTime),
   'createdAt': const TimestampConverter().toJson(instance.createdAt),

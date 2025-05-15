@@ -201,6 +201,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
+  currency_picker:
+    dependency: "direct main"
+    description:
+      name: currency_picker
+      sha256: c9ab5c0da8ae4dcc6421064dccde072b44f5b44914691b967ea4cf45a266a658
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.21"
   dart_style:
     dependency: transitive
     description:
@@ -209,6 +217,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.1"
+  date_picker_plus:
+    dependency: "direct main"
+    description:
+      name: date_picker_plus
+      sha256: e2693c3514430cdc874d071dcb80a717385cb94206e8e458137c993b5c69d9a7
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.2.0"
   fake_async:
     dependency: transitive
     description:
@@ -512,6 +528,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.1.1"
+  live_currency_rate:
+    dependency: "direct main"
+    description:
+      name: live_currency_rate
+      sha256: "4d4901408042fade323693491050ac3c7f27ae8e4482778b8b57da2239f33a09"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.8"
   logging:
     dependency: transitive
     description:

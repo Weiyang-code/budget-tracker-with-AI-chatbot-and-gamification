@@ -20,10 +20,19 @@ class TimestampConverter implements JsonConverter<Timestamp, Object> {
 class Wallet {
   String id;
   String name;
+  String type;
+  String currency;
   double balance; // or double if you prefer
   String uid;
 
-  Wallet({this.id = '', this.name = '', this.balance = 0, this.uid = ''});
+  Wallet({
+    this.id = '',
+    this.name = '',
+    this.balance = 0,
+    this.uid = '',
+    this.type = '',
+    this.currency = '',
+  });
 
   factory Wallet.fromJson(Map<String, dynamic> json) => _$WalletFromJson(json);
   Map<String, dynamic> toJson() => _$WalletToJson(this);
@@ -63,6 +72,7 @@ class Budget {
   String uid;
   String category;
   double amount;
+  double spending; // total spending in this budget
 
   @TimestampConverter()
   Timestamp startTime;
@@ -78,6 +88,7 @@ class Budget {
     this.uid = '',
     this.category = '',
     this.amount = 0.0,
+    this.spending = 0.0,
     Timestamp? startTime,
     Timestamp? endTime,
     Timestamp? createdAt,
