@@ -135,6 +135,24 @@ class FirestoreService {
     });
   }
 
+  Stream<List<Budget>> streamActiveBudgets() {
+    var user = AuthService().user!;
+    var collectionRef = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('budgets');
+
+    final now = firestore.Timestamp.fromDate(DateTime.now());
+
+    return collectionRef.where('endTime', isGreaterThan: now).snapshots().map((
+      querySnapshot,
+    ) {
+      return querySnapshot.docs.map((doc) {
+        return Budget.fromJson(doc.data());
+      }).toList();
+    });
+  }
+
   Stream<List<Transaction>> streamTransactions({required String walletId}) {
     var user = AuthService().user!;
     var ref = _db
