@@ -3,20 +3,20 @@ import 'package:budgettracker/services/firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:currency_picker/currency_picker.dart';
 
-class WalletCard extends StatefulWidget {
-  const WalletCard({super.key});
+class WalletCard extends StatelessWidget {
+  final Currency selectedCurrency;
+  final void Function(Currency) onCurrencyChanged;
 
-  @override
-  State<WalletCard> createState() => _WalletCardState();
-}
-
-class _WalletCardState extends State<WalletCard> {
-  Currency _selectedCurrency = CurrencyService().findByCode('USD')!;
+  const WalletCard({
+    super.key,
+    required this.selectedCurrency,
+    required this.onCurrencyChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<double>(
-      stream: FirestoreService().streamTotalBalance(_selectedCurrency.code),
+      stream: FirestoreService().streamTotalBalance(selectedCurrency.code),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
@@ -38,7 +38,7 @@ class _WalletCardState extends State<WalletCard> {
         double total = snapshot.data ?? 0.0;
         String formattedBalance = NumberFormat.currency(
           locale: 'en_US',
-          symbol: _selectedCurrency.symbol,
+          symbol: selectedCurrency.symbol,
         ).format(total);
 
         return Padding(
@@ -133,9 +133,7 @@ class _WalletCardState extends State<WalletCard> {
                               showCurrencyName: true,
                               showCurrencyCode: true,
                               onSelect: (Currency currency) {
-                                setState(() {
-                                  _selectedCurrency = currency;
-                                });
+                                onCurrencyChanged(currency); // notify parent
                               },
                             );
                           },
@@ -158,7 +156,7 @@ class _WalletCardState extends State<WalletCard> {
                                   size: 25,
                                 ),
                                 Text(
-                                  _selectedCurrency.code,
+                                  selectedCurrency.code,
                                   style: const TextStyle(
                                     color: Colors.green,
                                     fontWeight: FontWeight.w500,

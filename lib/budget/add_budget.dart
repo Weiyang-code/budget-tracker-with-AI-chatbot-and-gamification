@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:budgettracker/services/firestore.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_picker_plus/date_picker_plus.dart';
 
 class AddBudgetScreen extends StatefulWidget {
@@ -87,15 +86,14 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
         child: Card(
           color: Colors.grey[900],
           elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Form(
               key: formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Category Dropdown
                   DropdownButtonFormField<String>(
@@ -168,6 +166,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                     onTap: () => _pickDateRange(context),
                   ),
                   const Divider(color: Colors.grey, thickness: 1, height: 20),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),

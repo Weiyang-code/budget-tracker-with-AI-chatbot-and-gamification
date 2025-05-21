@@ -45,15 +45,14 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
         child: Card(
           color: Colors.grey[900],
           elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Form(
               key: formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Wallet Name
                   TextFormField(
@@ -169,6 +168,7 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),

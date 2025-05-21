@@ -140,7 +140,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     horizontal: 4,
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.zero,
                                   ),
                                   child: ListTile(
                                     contentPadding: const EdgeInsets.symmetric(
@@ -180,14 +180,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),
-                                        if (transaction.note.isNotEmpty)
-                                          Text(
-                                            'Note: ${transaction.note}', // Show the note with label
-                                            style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontStyle: FontStyle.italic,
+                                        transaction.note.isNotEmpty
+                                            ? Text(
+                                              'Note: ${transaction.note}',
+                                              style: const TextStyle(
+                                                color: Colors.white70,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            )
+                                            : const Text(
+                                              'Note: None',
+                                              style: TextStyle(
+                                                color: Colors.white70,
+                                                fontStyle: FontStyle.italic,
+                                              ),
                                             ),
-                                          ),
                                       ],
                                     ),
                                     trailing: Text(

@@ -45,7 +45,7 @@ class SideDrawer extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(FontAwesomeIcons.history),
+            leading: const Icon(FontAwesomeIcons.clockRotateLeft),
             title: const Text('History'),
             onTap: () {
               Navigator.pushNamed(context, '/history');

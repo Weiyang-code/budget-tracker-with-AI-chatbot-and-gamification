@@ -13,9 +13,14 @@ class AuthService {
 
   Future<void> googleLogin() async {
     try {
-      final googleUser = await GoogleSignIn().signIn();
+      final googleSignIn = GoogleSignIn();
 
-      if (googleUser == null) return;
+      // Sign out first to force account selection
+      await googleSignIn.signOut();
+
+      final googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) return; // User canceled the login
 
       final googleAuth = await googleUser.authentication;
 
@@ -27,14 +32,14 @@ class AuthService {
       await FirebaseAuth.instance.signInWithCredential(authCredential);
 
       Fluttertoast.showToast(
-        msg: "Your have logged in successfully.",
+        msg: "You have logged in successfully.",
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.SNACKBAR,
         backgroundColor: Colors.black54,
         textColor: Colors.green[300],
         fontSize: 16.0,
       );
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       // handle error
     }
   }

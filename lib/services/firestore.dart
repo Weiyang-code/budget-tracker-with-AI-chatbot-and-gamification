@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:budgettracker/services/auth.dart';
 import 'package:budgettracker/services/models.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:live_currency_rate/live_currency_rate.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -97,10 +98,11 @@ class FirestoreService {
   }) async {
     try {
       var user = AuthService().user!;
-
       var userRef = _db.collection('users').doc(user.uid);
-      var userDoc = await userRef.get();
+      var now = DateTime.now();
 
+      // Check if user document exists, create if not
+      var userDoc = await userRef.get();
       if (!userDoc.exists) {
         await userRef.set({
           'uid': user.uid,
@@ -109,9 +111,31 @@ class FirestoreService {
         });
       }
 
-      var budgetId =
-          _db.collection('users').doc(user.uid).collection('budgets').doc().id;
+      // Check for existing active budget with same category
+      var existingBudgets =
+          await userRef
+              .collection('budgets')
+              .where('category', isEqualTo: category)
+              .where(
+                'endTime',
+                isGreaterThan: firestore.Timestamp.fromDate(now),
+              )
+              .get();
 
+      if (existingBudgets.docs.isNotEmpty) {
+        Fluttertoast.showToast(
+          msg: "An active budget already exists for this category.",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.SNACKBAR,
+          backgroundColor: Colors.red[700],
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
+        return;
+      }
+
+      // Proceed to create new budget
+      var budgetId = userRef.collection('budgets').doc().id;
       Budget budget = Budget(
         id: budgetId,
         uid: user.uid,
@@ -120,16 +144,10 @@ class FirestoreService {
         startTime: firestore.Timestamp.fromDate(startTime),
         endTime: firestore.Timestamp.fromDate(endTime),
         spending: 0,
-        createdAt: null, // Will be set by Firestore server timestamp
+        createdAt: null,
       );
 
-      var budgetRef = _db
-          .collection('users')
-          .doc(user.uid)
-          .collection('budgets')
-          .doc(budgetId);
-
-      await budgetRef.set({
+      await userRef.collection('budgets').doc(budgetId).set({
         ...budget.toJson(),
         'createdAt': firestore.FieldValue.serverTimestamp(),
       });
@@ -350,5 +368,247 @@ class FirestoreService {
       textColor: Colors.green[300],
       fontSize: 16.0,
     );
+  }
+
+  Future<void> deleteWallet(String walletId) async {
+    var user = AuthService().user!;
+    var walletRef = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('wallets')
+        .doc(walletId);
+    var transactionsRef = walletRef.collection('transactions');
+
+    try {
+      // Delete all transactions under the wallet first
+      var transactionsSnapshot = await transactionsRef.get();
+      for (var doc in transactionsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      // Delete the wallet document itself
+      await walletRef.delete();
+
+      Fluttertoast.showToast(
+        msg: "Wallet and related transactions deleted successfully",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.SNACKBAR,
+        backgroundColor: Colors.black54,
+        textColor: Colors.green[300],
+        fontSize: 16.0,
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Failed to delete wallet: $e",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.SNACKBAR,
+        backgroundColor: Colors.red[700],
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+    }
+  }
+
+  Future<void> deleteBudget(String budgetId) async {
+    var user = AuthService().user!;
+    var budgetRef = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('budgets')
+        .doc(budgetId);
+
+    try {
+      await budgetRef.delete();
+
+      Fluttertoast.showToast(
+        msg: "Budget deleted successfully",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.SNACKBAR,
+        backgroundColor: Colors.black54,
+        textColor: Colors.green[300],
+        fontSize: 16.0,
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Failed to delete budget: $e",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.SNACKBAR,
+        backgroundColor: Colors.red[700],
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+    }
+  }
+
+  Stream<Map<String, double>> streamConvertedCategoryTotals(
+    String targetCurrency,
+  ) {
+    final user = AuthService().user!;
+    final now = DateTime.now();
+    final cutoff = firestore.Timestamp.fromDate(
+      now.subtract(const Duration(days: 30)),
+    );
+    final Map<String, double> rateCache = {};
+
+    return _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('wallets')
+        .snapshots()
+        .asyncMap((walletsSnap) async {
+          final Map<String, double> categoryTotals = {};
+
+          for (final walletDoc in walletsSnap.docs) {
+            final walletId = walletDoc.id;
+            final walletCurrency = walletDoc.data()['currency'];
+
+            if (walletCurrency == null) continue;
+
+            final txSnap =
+                await _db
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('wallets')
+                    .doc(walletId)
+                    .collection('transactions')
+                    .where('type', isEqualTo: 'expense')
+                    .where('date', isGreaterThan: cutoff)
+                    .get();
+
+            for (final doc in txSnap.docs) {
+              final tx = Transaction.fromJson(doc.data());
+
+              double convertedAmount = tx.amount;
+              if (walletCurrency != targetCurrency) {
+                final cacheKey = '$walletCurrency-$targetCurrency';
+                double rate;
+
+                if (rateCache.containsKey(cacheKey)) {
+                  rate = rateCache[cacheKey]!;
+                } else {
+                  try {
+                    final conversion = await LiveCurrencyRate.convertCurrency(
+                      walletCurrency,
+                      targetCurrency,
+                      1.0,
+                    );
+                    rate = conversion.result;
+                    rateCache[cacheKey] = rate;
+                  } catch (_) {
+                    rate = 1.0; // fallback
+                  }
+                }
+
+                convertedAmount = tx.amount * rate;
+              }
+
+              categoryTotals.update(
+                tx.category,
+                (old) => old + convertedAmount,
+                ifAbsent: () => convertedAmount,
+              );
+            }
+          }
+
+          return categoryTotals;
+        });
+  }
+
+  Stream<Map<String, double>> streamConvertedDailyTotals(
+    String type, // "expense" or "income"
+    String targetCurrency,
+  ) {
+    final user = AuthService().user!;
+    final now = DateTime.now();
+    final cutoff = firestore.Timestamp.fromDate(
+      now.subtract(const Duration(days: 6)),
+    );
+    final Map<String, double> rateCache = {};
+
+    return _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('wallets')
+        .snapshots()
+        .asyncMap((walletsSnap) async {
+          final Map<String, double> dailyTotals = {};
+
+          for (final walletDoc in walletsSnap.docs) {
+            final walletId = walletDoc.id;
+            final walletCurrency = walletDoc.data()['currency'];
+
+            if (walletCurrency == null) continue;
+
+            final txSnap =
+                await _db
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('wallets')
+                    .doc(walletId)
+                    .collection('transactions')
+                    .where('type', isEqualTo: type)
+                    .where('date', isGreaterThanOrEqualTo: cutoff)
+                    .get();
+
+            for (final doc in txSnap.docs) {
+              final tx = Transaction.fromJson(doc.data());
+              final txDate = tx.date.toDate();
+              final dayKey = DateFormat(
+                'E',
+              ).format(txDate); // "Mon", "Tue", etc.
+
+              double amount = tx.amount;
+
+              if (walletCurrency != targetCurrency) {
+                final cacheKey = '$walletCurrency-$targetCurrency';
+
+                double rate;
+                if (rateCache.containsKey(cacheKey)) {
+                  rate = rateCache[cacheKey]!;
+                } else {
+                  try {
+                    final conversion = await LiveCurrencyRate.convertCurrency(
+                      walletCurrency,
+                      targetCurrency,
+                      1.0,
+                    );
+                    rate = conversion.result;
+                    rateCache[cacheKey] = rate;
+                  } catch (_) {
+                    rate = 1.0; // fallback
+                  }
+                }
+
+                amount *= rate;
+              }
+
+              // Round the converted amount
+              amount = double.parse(amount.toStringAsFixed(2));
+
+              dailyTotals.update(
+                dayKey,
+                (existing) =>
+                    double.parse((existing + amount).toStringAsFixed(2)),
+                ifAbsent: () => amount,
+              );
+            }
+          }
+
+          return dailyTotals;
+        });
+  }
+
+  final weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  Stream<Map<String, double>> streamWithMissingDaysFilled(
+    String type,
+    String currency,
+  ) {
+    return streamConvertedDailyTotals(type, currency).map((data) {
+      final Map<String, double> filled = {
+        for (final day in weekDays) day: data[day] ?? 0,
+      };
+      return filled;
+    });
   }
 }

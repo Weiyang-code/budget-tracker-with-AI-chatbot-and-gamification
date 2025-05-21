@@ -50,6 +50,9 @@ dependencies:
   currency_picker: ^2.0.21
   live_currency_rate: ^1.0.8
   date_picker_plus: ^4.2.0
+  percent_indicator: ^4.2.5
+  fl_chart: ^1.0.0
+  syncfusion_flutter_gauges: ^29.2.4
 
 dev_dependencies:
   flutter_test:

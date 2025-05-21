@@ -15,7 +15,7 @@ class TransactionScreen extends StatefulWidget {
 class _TransactionScreenState extends State<TransactionScreen> {
   final formKey = GlobalKey<FormState>();
   final amountController = TextEditingController();
-  final noteController = TextEditingController(); // <-- Added
+  final noteController = TextEditingController();
   String? selectedCategory;
   String selectedType = 'expense';
   DateTime? selectedDate;
@@ -54,240 +54,267 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Transaction'),
-        actions: [
-          IconButton(
-            icon: const Icon(FontAwesomeIcons.check),
-            onPressed: () async {
-              if (formKey.currentState!.validate() &&
-                  selectedDate != null &&
-                  selectedWalletId != null &&
-                  (selectedType == 'income' || selectedCategory != null)) {
-                final txn = models.Transaction(
-                  category: selectedCategory ?? '',
-                  amount: double.tryParse(amountController.text.trim()) ?? 0.0,
-                  date: Timestamp.fromDate(selectedDate!),
-                  type: selectedType,
-                );
+    return StreamBuilder<List<models.Wallet>>(
+      stream: FirestoreService().streamAllWallets(),
+      builder: (context, snapshot) {
+        final wallets = snapshot.data ?? [];
 
-                await FirestoreService().addTransaction(
-                  walletId: selectedWalletId!,
-                  transaction: txn,
-                  note: noteController.text.trim(), // <-- Pass note
-                );
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Add Transaction'),
+            actions:
+                wallets.isNotEmpty
+                    ? [
+                      IconButton(
+                        icon: const Icon(FontAwesomeIcons.check),
+                        onPressed: () async {
+                          if (formKey.currentState!.validate() &&
+                              selectedDate != null &&
+                              selectedWalletId != null &&
+                              (selectedType == 'income' ||
+                                  selectedCategory != null)) {
+                            final txn = models.Transaction(
+                              category: selectedCategory ?? '',
+                              amount:
+                                  double.tryParse(
+                                    amountController.text.trim(),
+                                  ) ??
+                                  0.0,
+                              date: Timestamp.fromDate(selectedDate!),
+                              type: selectedType,
+                            );
 
-                Navigator.pop(context);
-              }
-            },
+                            await FirestoreService().addTransaction(
+                              walletId: selectedWalletId!,
+                              transaction: txn,
+                              note: noteController.text.trim(),
+                            );
+
+                            Navigator.pop(context);
+                          }
+                        },
+                      ),
+                    ]
+                    : null,
           ),
-        ],
-      ),
-      body: StreamBuilder<List<models.Wallet>>(
-        stream: FirestoreService().streamAllWallets(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No wallets found.'));
-          }
-
-          final wallets = snapshot.data!;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Card(
-              color: Colors.grey[900],
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Wallet Dropdown
-                      DropdownButtonFormField<String>(
-                        value: selectedWalletId,
-                        decoration: const InputDecoration(
-                          labelText: 'Select Wallet',
-                          labelStyle: TextStyle(color: Colors.white),
-                        ),
-                        dropdownColor: Colors.grey[850],
-                        style: const TextStyle(color: Colors.grey),
-                        items:
-                            wallets.map((wallet) {
-                              return DropdownMenuItem(
-                                value: wallet.id,
-                                child: Text(
-                                  '${wallet.name} (${wallet.currency})',
+          body:
+              snapshot.connectionState == ConnectionState.waiting
+                  ? const Center(child: CircularProgressIndicator())
+                  : wallets.isEmpty
+                  ? const Center(child: Text('No wallets found.'))
+                  : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Card(
+                      color: Colors.grey[900],
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.zero,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Form(
+                          key: formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Wallet Dropdown
+                              DropdownButtonFormField<String>(
+                                value: selectedWalletId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Select Wallet',
+                                  labelStyle: TextStyle(color: Colors.white),
                                 ),
-                              );
-                            }).toList(),
-                        onChanged: (id) {
-                          setState(() {
-                            selectedWalletId = id;
-                          });
-                        },
-                        validator:
-                            (value) =>
-                                value == null ? 'Please select a wallet' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Transaction Type Toggle
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Type',
-                            style: TextStyle(fontSize: 20, color: Colors.white),
-                          ),
-                          ToggleButtons(
-                            isSelected: [
-                              selectedType == 'expense',
-                              selectedType == 'income',
-                            ],
-                            onPressed: (index) {
-                              setState(() {
-                                selectedType =
-                                    index == 0 ? 'expense' : 'income';
-                                if (selectedType == 'income') {
-                                  selectedCategory = null;
-                                }
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(8),
-                            selectedColor: Colors.white,
-                            fillColor: Colors.redAccent,
-                            color: Colors.grey,
-                            children: const [
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16),
-                                child: Text('Expense'),
+                                dropdownColor: Colors.grey[850],
+                                style: const TextStyle(color: Colors.grey),
+                                items:
+                                    wallets.map((wallet) {
+                                      return DropdownMenuItem(
+                                        value: wallet.id,
+                                        child: Text(
+                                          '${wallet.name} (${wallet.currency})',
+                                        ),
+                                      );
+                                    }).toList(),
+                                onChanged: (id) {
+                                  setState(() {
+                                    selectedWalletId = id;
+                                  });
+                                },
+                                validator:
+                                    (value) =>
+                                        value == null
+                                            ? 'Please select a wallet'
+                                            : null,
                               ),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16),
-                                child: Text('Income'),
+                              const SizedBox(height: 16),
+
+                              // Transaction Type Toggle
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Type',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  ToggleButtons(
+                                    isSelected: [
+                                      selectedType == 'expense',
+                                      selectedType == 'income',
+                                    ],
+                                    onPressed: (index) {
+                                      setState(() {
+                                        selectedType =
+                                            index == 0 ? 'expense' : 'income';
+                                        if (selectedType == 'income') {
+                                          selectedCategory = null;
+                                        }
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(8),
+                                    selectedColor: Colors.white,
+                                    fillColor: Colors.redAccent,
+                                    color: Colors.grey,
+                                    children: const [
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                        ),
+                                        child: Text('Expense'),
+                                      ),
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                        ),
+                                        child: Text('Income'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
+                              const SizedBox(height: 16),
+
+                              // Show Category only for expenses
+                              if (selectedType == 'expense') ...[
+                                DropdownButtonFormField<String>(
+                                  value: selectedCategory,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Category',
+                                    labelStyle: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                                  style: const TextStyle(color: Colors.grey),
+                                  items:
+                                      categories.map((cat) {
+                                        return DropdownMenuItem(
+                                          value: cat,
+                                          child: Text(cat),
+                                        );
+                                      }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      selectedCategory = value;
+                                    });
+                                  },
+                                  validator: (value) {
+                                    if (selectedType == 'expense' &&
+                                        value == null) {
+                                      return 'Select a category';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+
+                              // Amount
+                              const Text(
+                                'Amount',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              TextFormField(
+                                controller: amountController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  border: UnderlineInputBorder(),
+                                  hintText: 'Enter amount',
+                                  hintStyle: TextStyle(color: Colors.grey),
+                                ),
+                                style: const TextStyle(color: Colors.white),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Enter amount';
+                                  }
+                                  if (double.tryParse(value.trim()) == null) {
+                                    return 'Invalid number';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Note field
+                              const Text(
+                                'Note',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              TextFormField(
+                                controller: noteController,
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  border: UnderlineInputBorder(),
+                                  hintText: 'Optional note or description',
+                                  hintStyle: TextStyle(color: Colors.grey),
+                                ),
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Date Picker
+                              const Text(
+                                'Date',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              ListTile(
+                                title: Text(
+                                  _formatDate(selectedDate),
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+                                trailing: const Icon(FontAwesomeIcons.calendar),
+                                onTap: () => _pickDate(context),
+                              ),
+                              const Divider(
+                                color: Colors.grey,
+                                thickness: 1,
+                                height: 20,
+                              ),
+                              const SizedBox(height: 16),
                             ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Show Category only for expenses
-                      if (selectedType == 'expense') ...[
-                        DropdownButtonFormField<String>(
-                          value: selectedCategory,
-                          decoration: const InputDecoration(
-                            labelText: 'Category',
-                            labelStyle: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                            ),
-                          ),
-                          style: const TextStyle(color: Colors.grey),
-                          items:
-                              categories.map((cat) {
-                                return DropdownMenuItem(
-                                  value: cat,
-                                  child: Text(cat),
-                                );
-                              }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedCategory = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (selectedType == 'expense' && value == null) {
-                              return 'Select a category';
-                            }
-                            return null;
-                          },
                         ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // Amount
-                      const Text(
-                        'Amount',
-                        style: TextStyle(fontSize: 20, color: Colors.white),
                       ),
-                      const SizedBox(height: 4),
-                      TextFormField(
-                        controller: amountController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          border: UnderlineInputBorder(),
-                          hintText: 'Enter amount',
-                          hintStyle: TextStyle(color: Colors.grey),
-                        ),
-                        style: const TextStyle(color: Colors.white),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Enter amount';
-                          }
-                          if (double.tryParse(value.trim()) == null) {
-                            return 'Invalid number';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Note field
-                      const Text(
-                        'Note',
-                        style: TextStyle(fontSize: 20, color: Colors.white),
-                      ),
-                      const SizedBox(height: 4),
-                      TextFormField(
-                        controller: noteController,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          border: UnderlineInputBorder(),
-                          hintText: 'Optional note or description',
-                          hintStyle: TextStyle(color: Colors.grey),
-                        ),
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Date Picker
-                      const Text(
-                        'Date',
-                        style: TextStyle(fontSize: 20, color: Colors.white),
-                      ),
-                      const SizedBox(height: 4),
-                      ListTile(
-                        title: Text(
-                          _formatDate(selectedDate),
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        trailing: const Icon(FontAwesomeIcons.calendar),
-                        onTap: () => _pickDate(context),
-                      ),
-                      const Divider(
-                        color: Colors.grey,
-                        thickness: 1,
-                        height: 20,
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+        );
+      },
     );
   }
 }

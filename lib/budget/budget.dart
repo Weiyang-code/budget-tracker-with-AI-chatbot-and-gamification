@@ -1,8 +1,10 @@
+import 'package:budgettracker/budget/budget_details.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:budgettracker/services/firestore.dart';
 import 'package:budgettracker/services/models.dart';
 import 'package:intl/intl.dart';
+import 'package:percent_indicator/linear_percent_indicator.dart';
 
 class BudgetScreen extends StatelessWidget {
   const BudgetScreen({super.key});
@@ -42,7 +44,6 @@ class BudgetScreen extends StatelessWidget {
 
             final allBudgets = snapshot.data ?? [];
 
-            // Split budgets into active and past
             final activeBudgets =
                 allBudgets
                     .where((b) => b.endTime.toDate().isAfter(now))
@@ -55,8 +56,8 @@ class BudgetScreen extends StatelessWidget {
 
             return TabBarView(
               children: [
-                _buildBudgetList(activeBudgets),
-                _buildBudgetList(pastBudgets),
+                _buildBudgetList(context, activeBudgets),
+                _buildBudgetList(context, pastBudgets),
               ],
             );
           },
@@ -69,7 +70,7 @@ class BudgetScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBudgetList(List<Budget> budgets) {
+  Widget _buildBudgetList(BuildContext context, List<Budget> budgets) {
     if (budgets.isEmpty) {
       return Center(
         child: Column(
@@ -87,61 +88,149 @@ class BudgetScreen extends StatelessWidget {
       itemCount: budgets.length,
       itemBuilder: (context, index) {
         final budget = budgets[index];
+        final percent = (budget.spending / budget.amount).clamp(0.0, 1.0);
 
-        return Card(
-          color: Colors.grey[900],
-          elevation: 4,
-          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 10,
-            ),
-            title: Text(
-              budget.category,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-                color: Colors.white,
+        Color progressColor;
+        if (percent < 0.5) {
+          progressColor = Colors.green;
+        } else if (percent < 0.8) {
+          progressColor = Colors.orange;
+        } else {
+          progressColor = Colors.red;
+        }
+
+        return InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BudgetDetailsScreen(budget: budget),
               ),
+            );
+          },
+          child: Card(
+            color: Colors.grey[900],
+            elevation: 4,
+            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 6),
-                Text.rich(
-                  TextSpan(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header row with category and delete button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const TextSpan(
-                        text: 'Amount: ',
-                        style: TextStyle(color: Colors.white),
+                      Text(
+                        budget.category,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                          color: Colors.white,
+                        ),
                       ),
-                      TextSpan(
-                        text: '\$${_formatAmount(budget.amount)}',
-                        style: const TextStyle(color: Colors.orange),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder:
+                                (context) => AlertDialog(
+                                  title: const Text('Delete Budget'),
+                                  content: const Text(
+                                    'Are you sure you want to delete this budget?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed:
+                                          () =>
+                                              Navigator.of(context).pop(false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed:
+                                          () => Navigator.of(context).pop(true),
+                                      child: const Text(
+                                        'Delete',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                          );
+                          if (confirm == true) {
+                            await FirestoreService().deleteBudget(budget.id);
+                          }
+                        },
                       ),
                     ],
                   ),
-                ),
-
-                const SizedBox(height: 4),
-                Text(
-                  'Start: ${_formatDate(budget.startTime)}',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'End: ${_formatDate(budget.endTime)}',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'Limit: ',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        TextSpan(
+                          text: '\$${_formatAmount(budget.amount)}',
+                          style: const TextStyle(color: Colors.green),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'Spent: ',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        TextSpan(
+                          text: '\$${_formatAmount(budget.spending)}',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Start: ${_formatDate(budget.startTime)}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'End: ${_formatDate(budget.endTime)}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: LinearPercentIndicator(
+                          lineHeight: 8.0,
+                          percent: percent,
+                          backgroundColor: Colors.black,
+                          progressColor: progressColor,
+                          barRadius: const Radius.circular(10),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${(percent * 100).toStringAsFixed(1)}%',
+                        style: TextStyle(color: progressColor),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            onTap: () {
-              // Optional: Navigate to budget details screen
-            },
           ),
         );
       },
