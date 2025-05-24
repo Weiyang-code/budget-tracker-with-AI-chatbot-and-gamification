@@ -99,17 +99,3 @@ class Budget {
   factory Budget.fromJson(Map<String, dynamic> json) => _$BudgetFromJson(json);
   Map<String, dynamic> toJson() => _$BudgetToJson(this);
 }
-
-@JsonSerializable()
-class Category {
-  String id;
-  String name;
-  String icon; // optional: emoji or icon filename
-  double total; // total spending in this category
-
-  Category({this.id = '', this.name = '', this.icon = '', this.total = 0});
-
-  factory Category.fromJson(Map<String, dynamic> json) =>
-      _$CategoryFromJson(json);
-  Map<String, dynamic> toJson() => _$CategoryToJson(this);
-}

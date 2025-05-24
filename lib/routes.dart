@@ -12,6 +12,7 @@ import 'package:budgettracker/wallet/wallet.dart';
 import 'package:budgettracker/wallet/add_wallet.dart';
 import 'package:budgettracker/budget/add_budget.dart';
 import 'package:budgettracker/budget/budget_details.dart';
+import 'package:budgettracker/user_info.dart';
 
 var appRoutes = {
   '/': (context) => const HomeScreen(),
@@ -28,4 +29,5 @@ var appRoutes = {
   '/add_wallet': (context) => const AddWalletScreen(),
   '/add_budget': (context) => const AddBudgetScreen(),
   '/budget_details': (context) => const BudgetDetailsScreen(),
+  '/user_info': (context) => UserInfoScreen(),
 };

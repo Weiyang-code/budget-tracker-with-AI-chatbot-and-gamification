@@ -10,6 +10,44 @@ import 'package:fluttertoast/fluttertoast.dart';
 class FirestoreService {
   final firestore.FirebaseFirestore _db = firestore.FirebaseFirestore.instance;
 
+  Future<void> saveUserInfo({
+    required String name,
+    required String age,
+    required String employmentStatus,
+    required String financialGoal,
+    required String monthlyIncome,
+    required BuildContext context,
+  }) async {
+    final user = AuthService().user;
+
+    if (user != null) {
+      final userDoc = _db.collection('users').doc(user.uid);
+
+      await userDoc.set({
+        'uid': user.uid,
+        'email': user.email,
+        'name': name.trim(),
+        'age': int.tryParse(age.trim()) ?? 0,
+        'employmentStatus': employmentStatus,
+        'financialGoal': financialGoal,
+        'monthlyIncome': monthlyIncome,
+        'createdAt': firestore.FieldValue.serverTimestamp(),
+      }, firestore.SetOptions(merge: true));
+
+      Navigator.pushNamed(context, '/dashboard');
+    }
+  }
+
+  Future<Map<String, dynamic>?> getUserData() async {
+    final user = AuthService().user;
+    if (user == null) {
+      throw Exception("No user logged in");
+    }
+
+    final doc = await _db.collection('users').doc(user.uid).get();
+    return doc.data();
+  }
+
   Future<double> convertToUSD(double amount, String fromCurrency) async {
     if (fromCurrency == 'USD') return amount;
 
@@ -35,21 +73,6 @@ class FirestoreService {
     var user = AuthService().user!; // Get the current authenticated user
 
     try {
-      // Reference to the user document in Firestore
-      var userRef = _db.collection('users').doc(user.uid);
-
-      // Check if the user document exists
-      var userDoc = await userRef.get();
-
-      // If the user document doesn't exist, create it
-      if (!userDoc.exists) {
-        await userRef.set({
-          'uid': user.uid,
-          'email': user.email,
-          'createdAt': firestore.FieldValue.serverTimestamp(),
-        });
-      }
-
       // Generate new wallet document reference
       var newWalletDoc =
           _db.collection('users').doc(user.uid).collection('wallets').doc();
@@ -610,5 +633,177 @@ class FirestoreService {
       };
       return filled;
     });
+  }
+
+  Future<String> buildUserContext() async {
+    final userData = await getUserData();
+    if (userData == null) return '';
+
+    // 1. Basic user info
+    final name = userData['name'] ?? 'User';
+    final age = userData['age'] ?? 'N/A';
+    final employmentStatus = userData['employmentStatus'] ?? 'N/A';
+    final financialGoal = userData['financialGoal'] ?? 'N/A';
+    final monthlyIncome = userData['monthlyIncome'] ?? 'N/A';
+
+    // 2. Wallets summary
+    final walletsSnap =
+        await _db
+            .collection('users')
+            .doc(AuthService().user!.uid)
+            .collection('wallets')
+            .get();
+    double totalBalanceUSD = 0.0;
+    final walletCount = walletsSnap.docs.length;
+    final currencies = <String>{};
+    final rateCache = <String, double>{};
+
+    for (var doc in walletsSnap.docs) {
+      final data = doc.data();
+      final balance = (data['balance'] as num?)?.toDouble() ?? 0;
+      final currency = data['currency'] as String? ?? 'USD';
+      currencies.add(currency);
+
+      if (currency != 'USD') {
+        try {
+          final cacheKey = '$currency-USD';
+          double rate;
+          if (rateCache.containsKey(cacheKey)) {
+            rate = rateCache[cacheKey]!;
+          } else {
+            final conversion = await LiveCurrencyRate.convertCurrency(
+              currency,
+              'USD',
+              1.0,
+            );
+            rate = conversion.result;
+            rateCache[cacheKey] = rate;
+          }
+          totalBalanceUSD += balance * rate;
+        } catch (_) {
+          totalBalanceUSD += balance; // fallback
+        }
+      } else {
+        totalBalanceUSD += balance;
+      }
+    }
+
+    // 3. Active budgets summary + budget progress
+    final nowTimestamp = firestore.Timestamp.fromDate(DateTime.now());
+    final budgetsSnap =
+        await _db
+            .collection('users')
+            .doc(AuthService().user!.uid)
+            .collection('budgets')
+            .where('endTime', isGreaterThan: nowTimestamp)
+            .get();
+
+    final activeBudgetCount = budgetsSnap.docs.length;
+    double totalBudgetAmount = 0;
+    double totalBudgetSpending = 0;
+    final budgetCategories = <String>{};
+    final budgetProgresses =
+        <String>[]; // will store per-budget progress strings
+
+    for (var doc in budgetsSnap.docs) {
+      final data = doc.data();
+      final amount = (data['amount'] as num?)?.toDouble() ?? 0;
+      final spending = (data['spending'] as num?)?.toDouble() ?? 0;
+      totalBudgetAmount += amount;
+      totalBudgetSpending += spending;
+      final category = data['category'] as String? ?? '';
+      budgetCategories.add(category);
+
+      double progress = (amount > 0) ? (spending / amount) : 0.0;
+      if (progress > 1.0) progress = 1.0; // cap at 100%
+      budgetProgresses.add(
+        'Budget for "$category": ${(progress * 100).toStringAsFixed(1)}% spent',
+      );
+    }
+
+    // 4. Spending by category in last 30 days converted to USD
+    // Adapted from your streamConvertedCategoryTotals to one-time fetch here
+    final now = DateTime.now();
+    final cutoff = firestore.Timestamp.fromDate(
+      now.subtract(const Duration(days: 30)),
+    );
+    final Map<String, double> categoryTotals = {};
+
+    for (final walletDoc in walletsSnap.docs) {
+      final walletId = walletDoc.id;
+      final walletCurrency = walletDoc.data()['currency'] as String? ?? 'USD';
+
+      final txSnap =
+          await _db
+              .collection('users')
+              .doc(AuthService().user!.uid)
+              .collection('wallets')
+              .doc(walletId)
+              .collection('transactions')
+              .where('type', isEqualTo: 'expense')
+              .where('date', isGreaterThan: cutoff)
+              .get();
+
+      for (final doc in txSnap.docs) {
+        final tx = Transaction.fromJson(doc.data());
+
+        double convertedAmount = tx.amount;
+        if (walletCurrency != 'USD') {
+          final cacheKey = '$walletCurrency-USD';
+          double rate;
+          if (rateCache.containsKey(cacheKey)) {
+            rate = rateCache[cacheKey]!;
+          } else {
+            try {
+              final conversion = await LiveCurrencyRate.convertCurrency(
+                walletCurrency,
+                'USD',
+                1.0,
+              );
+              rate = conversion.result;
+              rateCache[cacheKey] = rate;
+            } catch (_) {
+              rate = 1.0; // fallback
+            }
+          }
+          convertedAmount = tx.amount * rate;
+        }
+
+        categoryTotals.update(
+          tx.category,
+          (old) => old + convertedAmount,
+          ifAbsent: () => convertedAmount,
+        );
+      }
+    }
+
+    // 5. Build context string
+    final contextBuffer = StringBuffer();
+
+    contextBuffer.writeln(
+      'My name is $name, I am $age years old, and I am currently $employmentStatus.',
+    );
+    contextBuffer.writeln(
+      'My financial goal is "$financialGoal" and my monthly income is "$monthlyIncome".',
+    );
+    contextBuffer.writeln(
+      'I have $walletCount wallet(s) in the following currencies: ${currencies.join(", ")}.',
+    );
+    contextBuffer.writeln(
+      'The total balance across all wallets is approximately \$${totalBalanceUSD.toStringAsFixed(2)} USD.',
+    );
+    contextBuffer.writeln(
+      'I currently have $activeBudgetCount active budget(s) totaling \$${totalBudgetAmount.toStringAsFixed(2)} USD in the categories: ${budgetCategories.join(", ")}.',
+    );
+    contextBuffer.writeln('Budget spending progress:');
+    for (final progressStr in budgetProgresses) {
+      contextBuffer.writeln(' - $progressStr');
+    }
+    contextBuffer.writeln('Spending by category in the last 30 days (USD):');
+    categoryTotals.forEach((category, amount) {
+      contextBuffer.writeln(' - $category: \$${amount.toStringAsFixed(2)}');
+    });
+
+    return contextBuffer.toString();
   }
 }

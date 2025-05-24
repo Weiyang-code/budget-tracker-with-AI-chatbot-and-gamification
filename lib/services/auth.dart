@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -11,7 +12,7 @@ class AuthService {
     await FirebaseAuth.instance.signOut();
   }
 
-  Future<void> googleLogin() async {
+  Future<void> googleLogin(BuildContext context) async {
     try {
       final googleSignIn = GoogleSignIn();
 
@@ -20,7 +21,7 @@ class AuthService {
 
       final googleUser = await googleSignIn.signIn();
 
-      if (googleUser == null) return; // User canceled the login
+      if (googleUser == null) return; // User cancelled login
 
       final googleAuth = await googleUser.authentication;
 
@@ -29,18 +30,45 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      await FirebaseAuth.instance.signInWithCredential(authCredential);
+      // Sign in with Firebase
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        authCredential,
+      );
 
+      final isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
+
+      if (isNewUser) {
+        // Redirect new user to user info screen to complete profile
+        Navigator.pushNamed(context, '/user_info');
+      } else {
+        // Existing user logged in - show toast or navigate elsewhere if needed
+        Fluttertoast.showToast(
+          msg: "You have logged in successfully",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.SNACKBAR,
+          backgroundColor: Colors.black54,
+          textColor: Colors.green[300],
+          fontSize: 16.0,
+        );
+      }
+    } on FirebaseAuthException catch (e) {
       Fluttertoast.showToast(
-        msg: "You have logged in successfully.",
+        msg: "Login failed: ${e.message}",
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.SNACKBAR,
         backgroundColor: Colors.black54,
         textColor: Colors.green[300],
         fontSize: 16.0,
       );
-    } on FirebaseAuthException {
-      // handle error
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "An unexpected error occurred.",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.SNACKBAR,
+        backgroundColor: Colors.black54,
+        textColor: Colors.green[300],
+        fontSize: 16.0,
+      );
     }
   }
 
@@ -106,7 +134,7 @@ class AuthService {
           fontSize: 16.0,
         );
         // ignore: use_build_context_synchronously
-        Navigator.pushNamed(context, '/');
+        Navigator.pushNamed(context, '/user_info');
       }
     } on FirebaseAuthException catch (e) {
       String message = '';

@@ -176,7 +176,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                     },
                                     borderRadius: BorderRadius.circular(8),
                                     selectedColor: Colors.white,
-                                    fillColor: Colors.redAccent,
+                                    fillColor: Colors.deepPurple[300],
                                     color: Colors.grey,
                                     children: const [
                                       Padding(

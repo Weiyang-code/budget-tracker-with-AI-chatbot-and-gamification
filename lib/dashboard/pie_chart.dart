@@ -9,16 +9,16 @@ class CategoryPieChart extends StatelessWidget {
 
   // Define a list of distinct colors to cycle through
   static List<Color> sectionColors = [
-    Colors.pinkAccent.shade100,
-    Colors.purpleAccent.shade100,
-    Colors.blueAccent.shade100,
-    Colors.cyanAccent.shade100,
-    Colors.tealAccent.shade100,
-    Colors.greenAccent.shade100,
-    Colors.limeAccent.shade100,
-    Colors.yellowAccent.shade100,
-    Colors.orangeAccent.shade100,
-    Colors.redAccent.shade100,
+    Colors.pink.shade400,
+    Colors.purple.shade400,
+    Colors.blue.shade400,
+    Colors.cyan.shade700,
+    Colors.teal.shade400,
+    Colors.green.shade400,
+    Colors.lime.shade600,
+    Colors.yellow.shade700,
+    Colors.orange.shade600,
+    Colors.red.shade500,
   ];
 
   @override
@@ -36,9 +36,11 @@ class CategoryPieChart extends StatelessWidget {
         final byCategory = snapshot.data!;
 
         if (byCategory.isEmpty) {
-          return const SizedBox(
-            height: 200,
-            child: Center(child: Text('No spending yet')),
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: 16.0),
+              child: Text("No data available."),
+            ),
           );
         }
 

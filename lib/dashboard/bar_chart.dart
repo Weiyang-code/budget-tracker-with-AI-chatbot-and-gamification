@@ -93,7 +93,7 @@ class DailyBarChart extends StatelessWidget {
                         touchTooltipData: BarTouchTooltipData(
                           getTooltipColor:
                               (BarChartGroupData group) =>
-                                  Colors.deepPurple[300]!,
+                                  Colors.deepPurple[300]!.withOpacity(0.75),
                           getTooltipItem: (group, groupIndex, rod, rodIndex) {
                             return BarTooltipItem(
                               NumberFormat.simpleCurrency(

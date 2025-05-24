@@ -83,17 +83,3 @@ Map<String, dynamic> _$BudgetToJson(Budget instance) => <String, dynamic>{
   'endTime': const TimestampConverter().toJson(instance.endTime),
   'createdAt': const TimestampConverter().toJson(instance.createdAt),
 };
-
-Category _$CategoryFromJson(Map<String, dynamic> json) => Category(
-  id: json['id'] as String? ?? '',
-  name: json['name'] as String? ?? '',
-  icon: json['icon'] as String? ?? '',
-  total: (json['total'] as num?)?.toDouble() ?? 0,
-);
-
-Map<String, dynamic> _$CategoryToJson(Category instance) => <String, dynamic>{
-  'id': instance.id,
-  'name': instance.name,
-  'icon': instance.icon,
-  'total': instance.total,
-};

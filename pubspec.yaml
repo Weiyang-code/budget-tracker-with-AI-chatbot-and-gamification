@@ -53,6 +53,8 @@ dependencies:
   percent_indicator: ^4.2.5
   fl_chart: ^1.0.0
   syncfusion_flutter_gauges: ^29.2.4
+  firebase_vertexai: ^1.7.0
+  firebase_ai: ^2.0.0
 
 dev_dependencies:
   flutter_test:

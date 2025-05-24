@@ -73,7 +73,7 @@ class LoginScreen extends StatelessWidget {
               const SizedBox(height: 50),
 
               GestureDetector(
-                onTap: () => AuthService().googleLogin(),
+                onTap: () => AuthService().googleLogin(context),
                 child: SquareTile(imagePath: 'lib/images/google.jpeg'),
               ),
 
