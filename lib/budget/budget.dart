@@ -48,7 +48,6 @@ class BudgetScreen extends StatelessWidget {
                 allBudgets
                     .where((b) => b.endTime.toDate().isAfter(now))
                     .toList();
-
             final pastBudgets =
                 allBudgets
                     .where((b) => b.endTime.toDate().isBefore(now))
@@ -56,8 +55,8 @@ class BudgetScreen extends StatelessWidget {
 
             return TabBarView(
               children: [
-                _buildBudgetList(context, activeBudgets),
-                _buildBudgetList(context, pastBudgets),
+                _buildBudgetList(context, activeBudgets, type: 'active'),
+                _buildBudgetList(context, pastBudgets, type: 'past'),
               ],
             );
           },
@@ -70,19 +69,38 @@ class BudgetScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBudgetList(BuildContext context, List<Budget> budgets) {
+  Widget _buildBudgetList(
+    BuildContext context,
+    List<Budget> budgets, {
+    required String type,
+  }) {
     if (budgets.isEmpty) {
+      // Customize message based on type
+      String message;
+      if (type == 'active') {
+        message = 'No active budgets.';
+      } else if (type == 'past') {
+        message = 'No past budgets.';
+      } else {
+        message = 'No budgets found.';
+      }
+
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('No budgets found'),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
           ],
         ),
       );
     }
 
+    // The rest of your ListView.builder remains unchanged
     return ListView.builder(
       padding: const EdgeInsets.all(8),
       itemCount: budgets.length,

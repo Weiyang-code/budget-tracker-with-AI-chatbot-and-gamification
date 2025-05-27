@@ -101,7 +101,29 @@ class _TransactionScreenState extends State<TransactionScreen> {
               snapshot.connectionState == ConnectionState.waiting
                   ? const Center(child: CircularProgressIndicator())
                   : wallets.isEmpty
-                  ? const Center(child: Text('No wallets found.'))
+                  ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('No wallets found.'),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/add_wallet');
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Create Wallet'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            backgroundColor: Colors.deepPurple,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                   : SingleChildScrollView(
                     padding: const EdgeInsets.all(16.0),
                     child: Card(

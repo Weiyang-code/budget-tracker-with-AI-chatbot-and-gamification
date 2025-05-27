@@ -1,10 +1,9 @@
 import 'package:budgettracker/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:budgettracker/theme.dart';
-
-// Import the firebase_core plugin
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:budgettracker/services/avatar.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +42,7 @@ class _AppState extends State<App> {
 
         // Once complete, show your application
         if (snapshot.connectionState == ConnectionState.done) {
+          AvatarService().updateAvatarProgress();
           return MaterialApp(routes: appRoutes, theme: appTheme);
         }
 

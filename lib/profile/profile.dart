@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:budgettracker/services/auth.dart';
 import 'package:budgettracker/services/firestore.dart';
+import 'package:budgettracker/services/avatar.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -11,19 +12,22 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(title: const Text("Profile")),
       body: Center(
         child: FutureBuilder(
-          future: FirestoreService().getUserData(),
+          future: Future.wait([
+            FirestoreService().getUserData(),
+            AvatarService().getAvatarLevel(),
+          ]),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const CircularProgressIndicator();
             } else if (snapshot.hasError) {
               return Text("Error: ${snapshot.error}");
-            } else if (!snapshot.hasData || snapshot.data == null) {
-              return const Text("No user found");
             } else {
               var user = AuthService().user;
-              var userData = snapshot.data!;
+              var userData = snapshot.data![0] as Map<String, dynamic>;
+              var avatarLevel = snapshot.data![1] as int;
+
               return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   CircleAvatar(
                     radius: 50,
@@ -32,21 +36,29 @@ class ProfileScreen extends StatelessWidget {
                           'https://www.gravatar.com/avatar/placeholder',
                     ),
                   ),
+                  Image.asset(
+                    'lib/images/avatars/avatar_level_$avatarLevel.png',
+                    height: 100,
+                  ),
                   const SizedBox(height: 20),
                   Text(
-                    userData?['name'] ?? "No name",
+                    "Level $avatarLevel",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    userData['name'] ?? "No name",
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    userData?['email'] ?? "No email",
+                    userData['email'] ?? "No email",
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 30),
                   ElevatedButton(
                     onPressed: () async {
                       await AuthService().signOut();
-                      // ignore: use_build_context_synchronously
                       Navigator.of(
                         context,
                       ).pushNamedAndRemoveUntil('/', (route) => false);

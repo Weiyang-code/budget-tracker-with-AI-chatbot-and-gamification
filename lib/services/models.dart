@@ -99,3 +99,48 @@ class Budget {
   factory Budget.fromJson(Map<String, dynamic> json) => _$BudgetFromJson(json);
   Map<String, dynamic> toJson() => _$BudgetToJson(this);
 }
+
+@JsonSerializable()
+class Challenge {
+  final String id;
+  final String title;
+  final String category;
+  final double targetSpending;
+  final bool completed;
+  final DateTime startTime;
+  final DateTime endTime;
+
+  Challenge({
+    required this.id,
+    required this.title,
+    required this.category,
+    required this.targetSpending,
+    required this.completed,
+    required this.startTime,
+    required this.endTime,
+  });
+
+  factory Challenge.fromJson(Map<String, dynamic> json) {
+    return Challenge(
+      id: json['id'],
+      title: json['title'],
+      category: json['category'],
+      targetSpending: json['targetSpending'],
+      completed: json['completed'],
+      startTime: (json['startTime'] as Timestamp).toDate(),
+      endTime: (json['endTime'] as Timestamp).toDate(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'category': category,
+      'targetSpending': targetSpending,
+      'completed': completed,
+      'startTime': Timestamp.fromDate(startTime),
+      'endTime': Timestamp.fromDate(endTime),
+    };
+  }
+}

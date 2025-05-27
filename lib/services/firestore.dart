@@ -31,6 +31,8 @@ class FirestoreService {
         'employmentStatus': employmentStatus,
         'financialGoal': financialGoal,
         'monthlyIncome': monthlyIncome,
+        'avatarLevel': 1,
+        'completedChallenges': 0,
         'createdAt': firestore.FieldValue.serverTimestamp(),
       }, firestore.SetOptions(merge: true));
 
@@ -174,6 +176,8 @@ class FirestoreService {
         ...budget.toJson(),
         'createdAt': firestore.FieldValue.serverTimestamp(),
       });
+
+      await createChallengeBasedOnBudget(budget);
 
       Fluttertoast.showToast(
         msg: "Budget created successfully",
@@ -805,5 +809,117 @@ class FirestoreService {
     });
 
     return contextBuffer.toString();
+  }
+
+  Future<void> createChallengeBasedOnBudget(Budget budget) async {
+    var user = AuthService().user!;
+    var userRef = _db.collection('users').doc(user.uid);
+
+    final challengeId = userRef.collection('challenges').doc().id;
+    final challenge = Challenge(
+      id: challengeId,
+      title: 'Spend less than \$${budget.amount} in ${budget.category}',
+      category: budget.category,
+      targetSpending: budget.amount,
+      completed: false,
+      startTime: budget.startTime.toDate(),
+      endTime: budget.endTime.toDate(),
+    );
+
+    await userRef
+        .collection('challenges')
+        .doc(challengeId)
+        .set(challenge.toJson());
+  }
+
+  Stream<List<Challenge>> streamActiveChallenges() {
+    var user = AuthService().user!;
+    final now = firestore.Timestamp.fromDate(DateTime.now());
+
+    return _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('challenges')
+        .where('endTime', isGreaterThan: now)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => Challenge.fromJson(doc.data()))
+                  .toList(),
+        );
+  }
+
+  Stream<List<Challenge>> streamCompletedChallenges() {
+    var user = AuthService().user!;
+    final now = firestore.Timestamp.fromDate(DateTime.now());
+
+    return _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('challenges')
+        .where('endTime', isLessThanOrEqualTo: now)
+        .where('completed', isEqualTo: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => Challenge.fromJson(doc.data()))
+                  .toList(),
+        );
+  }
+
+  Stream<List<Challenge>> streamFailedChallenges() {
+    var user = AuthService().user!;
+    final now = firestore.Timestamp.fromDate(DateTime.now());
+
+    return _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('challenges')
+        .where('endTime', isLessThanOrEqualTo: now)
+        .where('completed', isEqualTo: false)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => Challenge.fromJson(doc.data()))
+                  .toList(),
+        );
+  }
+
+  Future<void> checkAndUpdateChallengeCompletion() async {
+    var user = AuthService().user!;
+    var userRef = _db.collection('users').doc(user.uid);
+    var challengesRef = userRef.collection('challenges');
+
+    var now = firestore.Timestamp.fromDate(DateTime.now());
+
+    var snapshot =
+        await challengesRef
+            .where('endTime', isLessThanOrEqualTo: now)
+            .where('completed', isEqualTo: false)
+            .get();
+
+    for (var doc in snapshot.docs) {
+      var challenge = Challenge.fromJson(doc.data());
+
+      var budgetSnapshot =
+          await userRef
+              .collection('budgets')
+              .where('category', isEqualTo: challenge.category)
+              .where('endTime', isGreaterThanOrEqualTo: challenge.startTime)
+              .get();
+
+      double currentSpending = 0.0;
+      for (var b in budgetSnapshot.docs) {
+        currentSpending += (b.data()['spending'] ?? 0);
+      }
+
+      if (currentSpending <= challenge.targetSpending) {
+        await doc.reference.update({'completed': true});
+        // Optional: trigger reward/level up logic
+      }
+    }
   }
 }

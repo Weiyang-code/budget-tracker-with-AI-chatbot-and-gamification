@@ -83,11 +83,16 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
   - lib/images/google.jpeg
-  - assets/
-  - assets/covers/
-  - assets/congrats.gif
-  - assets/logo.png
-  - assets/user.png
+  - lib/images/avatars/avatar_level_1.png
+  - lib/images/avatars/avatar_level_2.png
+  - lib/images/avatars/avatar_level_3.png
+  - lib/images/avatars/avatar_level_4.png
+  - lib/images/avatars/avatar_level_5.png
+  - lib/images/avatars/avatar_level_6.png
+  - lib/images/avatars/avatar_level_7.png
+  - lib/images/avatars/avatar_level_8.png
+  - lib/images/avatars/avatar_level_9.png
+  - lib/images/avatars/avatar_level_10.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:budgettracker/services/firestore.dart';
 
 class UserInfoScreen extends StatelessWidget {
