@@ -200,10 +200,10 @@ class FirestoreService {
   }
 
   Stream<List<Budget>> streamAllBudgets() {
-    var user = AuthService().user!;
+    var user = AuthService().user;
     var collectionRef = _db
         .collection('users')
-        .doc(user.uid)
+        .doc(user!.uid)
         .collection('budgets');
 
     return collectionRef.snapshots().map((querySnapshot) {
@@ -214,10 +214,10 @@ class FirestoreService {
   }
 
   Stream<List<Budget>> streamActiveBudgets() {
-    var user = AuthService().user!;
+    var user = AuthService().user;
     var collectionRef = _db
         .collection('users')
-        .doc(user.uid)
+        .doc(user!.uid)
         .collection('budgets');
 
     final now = firestore.Timestamp.fromDate(DateTime.now());
@@ -232,10 +232,10 @@ class FirestoreService {
   }
 
   Stream<List<Transaction>> streamTransactions({required String walletId}) {
-    var user = AuthService().user!;
+    var user = AuthService().user;
     var ref = _db
         .collection('users')
-        .doc(user.uid)
+        .doc(user!.uid)
         .collection('wallets')
         .doc(walletId)
         .collection('transactions')
@@ -249,10 +249,10 @@ class FirestoreService {
   }
 
   Stream<Wallet?> streamWallet({required String walletId}) {
-    var user = AuthService().user!;
+    var user = AuthService().user;
     var docRef = _db
         .collection('users')
-        .doc(user.uid)
+        .doc(user!.uid)
         .collection('wallets')
         .doc(walletId);
 
@@ -266,10 +266,10 @@ class FirestoreService {
   }
 
   Stream<List<Wallet>> streamAllWallets() {
-    var user = AuthService().user!;
+    var user = AuthService().user;
     var collectionRef = _db
         .collection('users')
-        .doc(user.uid)
+        .doc(user!.uid)
         .collection('wallets');
 
     return collectionRef.snapshots().map((querySnapshot) {
@@ -280,11 +280,11 @@ class FirestoreService {
   }
 
   Stream<double> streamTotalBalance(String targetCurrency) {
-    var user = AuthService().user!;
+    var user = AuthService().user;
 
     return _db
         .collection('users')
-        .doc(user.uid)
+        .doc(user!.uid)
         .collection('wallets')
         .snapshots()
         .asyncMap((querySnapshot) async {
@@ -398,10 +398,10 @@ class FirestoreService {
   }
 
   Future<void> deleteWallet(String walletId) async {
-    var user = AuthService().user!;
+    var user = AuthService().user;
     var walletRef = _db
         .collection('users')
-        .doc(user.uid)
+        .doc(user!.uid)
         .collection('wallets')
         .doc(walletId);
     var transactionsRef = walletRef.collection('transactions');
@@ -437,18 +437,24 @@ class FirestoreService {
   }
 
   Future<void> deleteBudget(String budgetId) async {
-    var user = AuthService().user!;
-    var budgetRef = _db
-        .collection('users')
-        .doc(user.uid)
-        .collection('budgets')
-        .doc(budgetId);
+    var user = AuthService().user;
+    var userRef = _db.collection('users').doc(user!.uid);
+    var budgetRef = userRef.collection('budgets').doc(budgetId);
+    var challengesRef = userRef.collection('challenges');
 
     try {
+      // Delete all challenges linked to this budgetId
+      final querySnapshot =
+          await challengesRef.where('budgetId', isEqualTo: budgetId).get();
+
+      for (var doc in querySnapshot.docs) {
+        await doc.reference.delete();
+      }
+
       await budgetRef.delete();
 
       Fluttertoast.showToast(
-        msg: "Budget deleted successfully",
+        msg: "Budget and related challenges deleted successfully",
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.SNACKBAR,
         backgroundColor: Colors.black54,
@@ -470,7 +476,7 @@ class FirestoreService {
   Stream<Map<String, double>> streamConvertedCategoryTotals(
     String targetCurrency,
   ) {
-    final user = AuthService().user!;
+    final user = AuthService().user;
     final now = DateTime.now();
     final cutoff = firestore.Timestamp.fromDate(
       now.subtract(const Duration(days: 30)),
@@ -479,7 +485,7 @@ class FirestoreService {
 
     return _db
         .collection('users')
-        .doc(user.uid)
+        .doc(user!.uid)
         .collection('wallets')
         .snapshots()
         .asyncMap((walletsSnap) async {
@@ -542,19 +548,19 @@ class FirestoreService {
   }
 
   Stream<Map<String, double>> streamConvertedDailyTotals(
-    String type, // "expense" or "income"
+    String type,
     String targetCurrency,
   ) {
-    final user = AuthService().user!;
+    final user = AuthService().user;
     final now = DateTime.now();
     final cutoff = firestore.Timestamp.fromDate(
-      now.subtract(const Duration(days: 6)),
+      now.subtract(const Duration(days: 7)),
     );
     final Map<String, double> rateCache = {};
 
     return _db
         .collection('users')
-        .doc(user.uid)
+        .doc(user!.uid)
         .collection('wallets')
         .snapshots()
         .asyncMap((walletsSnap) async {
@@ -580,9 +586,7 @@ class FirestoreService {
             for (final doc in txSnap.docs) {
               final tx = Transaction.fromJson(doc.data());
               final txDate = tx.date.toDate();
-              final dayKey = DateFormat(
-                'E',
-              ).format(txDate); // "Mon", "Tue", etc.
+              final dayKey = DateFormat('E').format(txDate);
 
               double amount = tx.amount;
 
@@ -812,13 +816,15 @@ class FirestoreService {
   }
 
   Future<void> createChallengeBasedOnBudget(Budget budget) async {
-    var user = AuthService().user!;
-    var userRef = _db.collection('users').doc(user.uid);
+    var user = AuthService().user;
+    var userRef = _db.collection('users').doc(user!.uid);
 
     final challengeId = userRef.collection('challenges').doc().id;
     final challenge = Challenge(
       id: challengeId,
-      title: 'Spend less than \$${budget.amount} in ${budget.category}',
+      budgetId: budget.id,
+      title:
+          'Spend less than \$${budget.amount.toStringAsFixed(2)} in ${budget.category}',
       category: budget.category,
       targetSpending: budget.amount,
       completed: false,
@@ -889,8 +895,9 @@ class FirestoreService {
   }
 
   Future<void> checkAndUpdateChallengeCompletion() async {
-    var user = AuthService().user!;
-    var userRef = _db.collection('users').doc(user.uid);
+    var user = AuthService().user;
+    if (user == null) return;
+    var userRef = _db.collection('users').doc(user!.uid);
     var challengesRef = userRef.collection('challenges');
 
     var now = firestore.Timestamp.fromDate(DateTime.now());
@@ -918,7 +925,6 @@ class FirestoreService {
 
       if (currentSpending <= challenge.targetSpending) {
         await doc.reference.update({'completed': true});
-        // Optional: trigger reward/level up logic
       }
     }
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:budgettracker/services/firestore.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 final model = FirebaseAI.vertexAI().generativeModel(model: 'gemini-2.0-flash');
 
@@ -47,9 +48,27 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
     _controller.clear();
 
-    final userContext = await FirestoreService().buildUserContext();
+    String fullPrompt;
 
-    final fullPrompt = '$userContext\nUser: $prompt';
+    final lowerPrompt = prompt.toLowerCase();
+
+    final needsContext = [
+      'budget',
+      'goal',
+      'spending',
+      'income',
+      'wallet',
+      'savings',
+      'expense',
+      'financial',
+    ].any((keyword) => lowerPrompt.contains(keyword));
+
+    if (needsContext) {
+      final userContext = await FirestoreService().buildUserContext();
+      fullPrompt = '$userContext\nUser: $prompt';
+    } else {
+      fullPrompt = 'User: $prompt';
+    }
 
     try {
       final content = await model.generateContent([Content.text(fullPrompt)]);
@@ -82,7 +101,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           color: bgColor,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Text(message.text, style: TextStyle(color: textColor)),
+        child: MarkdownBody(
+          data: message.text,
+          styleSheet: MarkdownStyleSheet(p: TextStyle(color: textColor)),
+        ),
       ),
     );
   }

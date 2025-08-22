@@ -103,6 +103,7 @@ class Budget {
 @JsonSerializable()
 class Challenge {
   final String id;
+  final String budgetId;
   final String title;
   final String category;
   final double targetSpending;
@@ -112,6 +113,7 @@ class Challenge {
 
   Challenge({
     required this.id,
+    required this.budgetId,
     required this.title,
     required this.category,
     required this.targetSpending,
@@ -123,6 +125,7 @@ class Challenge {
   factory Challenge.fromJson(Map<String, dynamic> json) {
     return Challenge(
       id: json['id'],
+      budgetId: json['budgetId'],
       title: json['title'],
       category: json['category'],
       targetSpending: json['targetSpending'],
@@ -135,6 +138,7 @@ class Challenge {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'budgetId': budgetId,
       'title': title,
       'category': category,
       'targetSpending': targetSpending,

@@ -83,3 +83,25 @@ Map<String, dynamic> _$BudgetToJson(Budget instance) => <String, dynamic>{
   'endTime': const TimestampConverter().toJson(instance.endTime),
   'createdAt': const TimestampConverter().toJson(instance.createdAt),
 };
+
+Challenge _$ChallengeFromJson(Map<String, dynamic> json) => Challenge(
+  id: json['id'] as String,
+  budgetId: json['budgetId'] as String,
+  title: json['title'] as String,
+  category: json['category'] as String,
+  targetSpending: (json['targetSpending'] as num).toDouble(),
+  completed: json['completed'] as bool,
+  startTime: DateTime.parse(json['startTime'] as String),
+  endTime: DateTime.parse(json['endTime'] as String),
+);
+
+Map<String, dynamic> _$ChallengeToJson(Challenge instance) => <String, dynamic>{
+  'id': instance.id,
+  'budgetId': instance.budgetId,
+  'title': instance.title,
+  'category': instance.category,
+  'targetSpending': instance.targetSpending,
+  'completed': instance.completed,
+  'startTime': instance.startTime.toIso8601String(),
+  'endTime': instance.endTime.toIso8601String(),
+};
